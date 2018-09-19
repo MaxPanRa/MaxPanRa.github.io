@@ -726,6 +726,14 @@ div#lab-bookblock {
 }
 }
 
+h4 {
+    font-family: Montserrat;
+    color: #263f71;
+    font-size: 17px;
+    text-align: center;
+    font-weight: 600;
+}
+
 h2 {
     font-family: Montserrat;
     font-size: 25px;
@@ -790,6 +798,22 @@ ul.navbar-nav.ml-auto li {
 
 .contact-area {
     background: white;
+}
+
+section#portfolio h2 {
+    color: white !important;
+}
+
+section#portfolio {
+    background: #343a3f;
+}
+.service-area .white_svg svg {
+    fill: #343a3f !important;
+}
+
+section#portfolio img {
+    border-radius: 10px;
+    box-shadow: 1px 1px 12px 6px #0000002b;
 }
 
 /*============================================
