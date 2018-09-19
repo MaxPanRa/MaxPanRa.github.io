@@ -788,6 +788,10 @@ ul.navbar-nav.ml-auto li {
     list-style: none !important;
 }
 
+.contact-area {
+    background: white;
+}
+
 /*============================================
 * END Custom Area
 *=============================================*/
