@@ -30,6 +30,9 @@ $(document).ready(function(){
                 });
             });
             console.log("Exito al traer los documentos!");
+            setTimeout(() => {
+                hideShowClass("delete");
+            }, 5000);
         }else{
             $("#pdf_div").append('<span id="noarchivopdf">No se halló ningún archivo.</span>');
             console.log("No se halló un archivo o se eliminó directamente desde la plataforma firebase.");
@@ -74,35 +77,29 @@ function RemoveChild (e){
 }
 function hideShowClass(classString){
     var logged=false;
-firebase.auth().onAuthStateChanged(function(user) {
-    window.user = user; // user is undefined if no user signed in
-    if(user == undefined){ // ------------------------------------------------ USUARIO:
-       $(".admin_only."+classString).each(function(id,element){
-           if(element.getAttribute("encrypted").toString() == "false"){
-               var encrypted = CryptoJS.AES.encrypt(element.innerHTML, "Secret Passphrase");
-               //console.log("encrypted user="+encrypted);
-               element.setAttribute("crypt", encrypted);
-               element.setAttribute("encrypted", true);
-               element.innerHTML="";
-           }
-       });
-       console.log("Not Logged In");
-       logged=false;
-    }else{ // ------------------------------------------------ ADMINISTRADOR:
-       $(".admin_only."+classString).each(function(id,element){
-           if(element.getAttribute("encrypted").toString() == "true"){
-               var encrypted=element.getAttribute("crypt").toString();
-               //console.log("encrypted admin="+encrypted);
-               var decrypted = CryptoJS.AES.decrypt(encrypted, "Secret Passphrase");
-               //console.log("decrypted admin="+decrypted);
-               var admin_decrypted = decrypted.toString(CryptoJS.enc.Utf8);
-               //console.log("decrypted admin_decrypted="+admin_decrypted);
-               element.innerHTML=admin_decrypted;
-           }
-           element.setAttribute("encrypted", false);
-       });
-       logged=true;
+    var user = firebase.auth().currentUser;
+    if (user) {
+      console.log("Mostrando Opción de Borrar Documentos...");
+      $(".admin_only."+classString).each(function(id,element){
+        if(element.getAttribute("encrypted").toString() == "true"){
+            var encrypted=element.getAttribute("crypt").toString();
+            var decrypted = CryptoJS.AES.decrypt(encrypted, "Secret Passphrase");
+            var admin_decrypted = decrypted.toString(CryptoJS.enc.Utf8);
+            element.innerHTML=admin_decrypted;
+        }
+        element.setAttribute("encrypted", false);
+    });
+    logged=true;
+    } else {
+        $(".admin_only."+classString).each(function(id,element){
+            if(element.getAttribute("encrypted").toString() == "false"){
+                var encrypted = CryptoJS.AES.encrypt(element.innerHTML, "Secret Passphrase");
+                element.setAttribute("crypt", encrypted);
+                element.setAttribute("encrypted", true);
+                element.innerHTML="";
+            }
+        });
+        logged=false;
     }
-   });
     return false;
 }
