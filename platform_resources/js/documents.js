@@ -101,12 +101,21 @@ function RemoveChildPDF (e){
             snapshot.forEach(function(data) {
               var SNAPPED = data.val();
                 if(toDelete==data.key){
-                    databaseRef.child(data.key).remove();
                     console.log("Éxito al borrar el documento!");
+                    // BORRAR DE LA VISTA
                     e.target.parentNode.nextSibling.remove();
                     if(e.target.parentNode.parentNode.children.length < 5)
                         e.target.parentNode.parentNode.remove();
                     e.target.parentNode.remove();
+                    // BORRAR DE STORAGE
+                    var removeRef = storageRef.child('PDF/'+SNAPPED.nombre);
+                    removeRef.delete().then(function() {
+                    // File deleted successfully
+                    }).catch(function(error) {
+                    // Uh-oh, an error occurred!
+                    });
+                    // BORRAR DE DATABASE
+                    databaseRef.child(data.key).remove();
                 }            
             });
         }else{
