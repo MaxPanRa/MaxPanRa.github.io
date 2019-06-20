@@ -32,6 +32,7 @@ function GoogleSignIn(){
         if(snapshot.val()){
             //console.log(snapshot.val());
             alert("Está en modo administrador.");
+            loginlogout();
         }else{
             //console.log(snapshot.val());
             alert("No cuenta con acceso de administrador.");
@@ -40,7 +41,6 @@ function GoogleSignIn(){
       });
     // Aquí termina.
     console.log("Success!");
-    loginlogout();
     // ...
     }).catch(function(error) {
     // Handle Errors here.
