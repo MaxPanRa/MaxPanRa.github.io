@@ -99,25 +99,17 @@ function RemoveChildPDF (e){
         if(snapshot.val() != undefined && snapshot.val() != null){
             snapshot.forEach(function(data) {
               var SNAPPED = data.val();
-              console.log("SNAPPED: " + SNAPPED);
-              console.log("data key: " + data.key);
-              console.log("data id: " + data.id);
-              console.log("Document key: " + SNAPPED.key);
-              console.log("Document ID: " + SNAPPED);
-                console.log("Document ID: " + SNAPPED.id);
-                if(removeID==SNAPPED.id){
-                    console.log("ES ESTA! ^^^^^^");
-                }
-                const pdf = pdfRef.child(SNAPPED.id);
-                  pdf.getDownloadURL().then((url) => { 
-                    console.log("url: "+url); 
-                  }).catch(function(error) {
-                    //SNAPPED.remove();
-                });
+                if(removeID==data.key){
+                    SNAPPED.remove();
+                    console.log("Éxito al borrar el documento!");
+                    console.log("Padre: "+e.target.parentNode.parentNode);
+                    console.log("Nodos hijos? "+e.target.parentNode.parentNode.hasChildNodes());
+                    console.log("# hijos: "+e.target.parentNode.parentNode.children.length);
+                    /*e.target.parentNode.nextSibling.remove();
+                    e.target.parentNode.remove();*/
+                }            
             });
-            console.log("Exito al borrar el documento!");
         }else{
-            //$("#pdf_div").append('<span id="noarchivopdf">No se halló ningún archivo.</span>');
             console.log("No se pudo eliminar el archivo!");
         }
       });
