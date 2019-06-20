@@ -99,6 +99,11 @@ function RemoveChildPDF (e){
         if(snapshot.val() != undefined && snapshot.val() != null){
             snapshot.forEach(function(data) {
               var SNAPPED = data.val();
+              console.log("SNAPPED: " + SNAPPED);
+              console.log("data key: " + data.key);
+              console.log("data id: " + data.id);
+              console.log("Document key: " + SNAPPED.key);
+              console.log("Document ID: " + SNAPPED);
                 console.log("Document ID: " + SNAPPED.id);
                 if(removeID==SNAPPED.id){
                     console.log("ES ESTA! ^^^^^^");
