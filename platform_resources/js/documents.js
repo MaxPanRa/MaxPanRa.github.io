@@ -22,7 +22,8 @@ $(document).ready(function(){
                   pdf.getDownloadURL().then((url) => { 
                     console.log("url: "+url); 
                     $("#pdf_"+data.key).remove();
-                    $("#pdf_div").append('<span class="admin_only" onclick="RemoveChild(event);" style="color: #ab4949;margin-left: -20px;margin-top: 6px;font-size: 14px;position: absolute;display:none;"><i class="fa fa-trash"></i></span>'+
+                    $("."+SNAPPED.tipo).css("display","block");
+                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only" onclick="RemoveChild(event);" style="color: #ab4949;margin-left: -20px;margin-top: 6px;font-size: 14px;position: absolute;display:none;"><i class="fa fa-trash"></i></span>'+
                                          "<a href='"+url+"' id='pdf_"+data.key+"' target='_blank' download='true'>"+SNAPPED.nombre+"</br></a>");
                   }).catch(function(error) {
                     SNAPPED.remove()
