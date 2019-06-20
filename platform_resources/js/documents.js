@@ -93,10 +93,13 @@ function RemoveChildPDF (e){
     var removeID = e.target.parentNode.nextSibling.id;
     var toDelete = removeID.split("pdf_")[1];
     var url = "https://firebasestorage.googleapis.com/v0/b/optiserv-lab.appspot.com/o/";
-    console.log("Éxito al borrar el documento!");
+    e.target.parentNode.nextSibling.remove();
+    e.target.parentNode.remove();
     console.log("Padre: "+e.target.parentNode.parentNode);
     console.log("Nodos hijos? "+e.target.parentNode.parentNode.hasChildNodes());
+
     console.log("# hijos: "+e.target.parentNode.parentNode.children.length);
+
     var databaseRef = firebase.database().ref('/Referencia_Documentos/PDF');
     databaseRef.orderByChild("nombre").on("value", (snapshot)=> {
         console.log(snapshot.val());
