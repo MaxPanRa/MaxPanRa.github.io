@@ -9,6 +9,7 @@ function GoogleSignOut(){
     logoutB.style.display="none";
     firebase.auth().signOut().then(function() {
       // Sign-out successful.
+      loginlogout();
     }).catch(function(error) {
       // An error happened.
     });
@@ -39,6 +40,7 @@ function GoogleSignIn(){
       });
     // Aquí termina.
     console.log("Success!");
+    loginlogout();
     // ...
     }).catch(function(error) {
     // Handle Errors here.
@@ -103,3 +105,34 @@ firebase.auth().onAuthStateChanged(function(user) {
      */
  }
 });
+
+function loginlogout(){
+    firebase.auth().onAuthStateChanged(function(user) {
+        window.user = user; // user is undefined if no user signed in
+        if(user == undefined){ // ------------------------------------------------ USUARIO:
+           $(".admin_only").each(function(id,element){
+               if(element.getAttribute("encrypted").toString() == "false"){
+                   var encrypted = CryptoJS.AES.encrypt(element.innerHTML, "Secret Passphrase");
+                   //console.log("encrypted user="+encrypted);
+                   element.setAttribute("crypt", encrypted);
+                   element.setAttribute("encrypted", true);
+                   element.innerHTML="";
+               }
+           });
+           //console.log("Not Logged In");
+        }else{ // ------------------------------------------------ ADMINISTRADOR:
+           $(".admin_only").each(function(id,element){
+               if(element.getAttribute("encrypted").toString() == "true"){
+                   var encrypted=element.getAttribute("crypt").toString();
+                   //console.log("encrypted admin="+encrypted);
+                   var decrypted = CryptoJS.AES.decrypt(encrypted, "Secret Passphrase");
+                   //console.log("decrypted admin="+decrypted);
+                   var admin_decrypted = decrypted.toString(CryptoJS.enc.Utf8);
+                   //console.log("decrypted admin_decrypted="+admin_decrypted);
+                   element.innerHTML=admin_decrypted;
+               }
+               element.setAttribute("encrypted", false);
+           });
+        }
+       });
+}
