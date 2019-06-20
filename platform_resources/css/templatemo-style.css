@@ -1023,10 +1023,10 @@ button#myBtnLogin:hover {
   position: relative;
 }
 
-#pdf_div {
+#pdf_div { /* ! */
   font-size: 12px;
   color: #505679;
-  height: 400px;
+  max-height: 400px;
   overflow-y: scroll;
 }
 #pdf_div::-webkit-scrollbar {
