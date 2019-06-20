@@ -99,8 +99,10 @@ function RemoveChildPDF (e){
         if(snapshot.val() != undefined && snapshot.val() != null){
             snapshot.forEach(function(data) {
               var SNAPPED = data.val();
-              debuger;
                 console.log("Document ID: " + SNAPPED.id);
+                if(removeID==SNAPPED.id){
+                    console.log("ES ESTA! ^^^^^^");
+                }
                 const pdf = pdfRef.child(SNAPPED.id);
                   pdf.getDownloadURL().then((url) => { 
                     console.log("url: "+url); 
