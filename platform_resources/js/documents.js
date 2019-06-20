@@ -32,12 +32,12 @@ $(document).ready(function(){
             console.log("Exito al traer los documentos!");
             setTimeout(() => {
                 var isLogged= hideShowClass("delete");
+                if(isLogged){
+                    $(".admin_only.delete").css("display","block");
+                }else{
+                        $(".admin_only.delete").css("display","none");
+                }
             }, 3000);
-            if(isLogged){
-                $(".admin_only.delete").css("display","block");
-            }else{
-                    $(".admin_only.delete").css("display","none");
-            }
         }else{
             $("#pdf_div").append('<span id="noarchivopdf">No se halló ningún archivo.</span>');
             console.log("No se halló un archivo o se eliminó directamente desde la plataforma firebase.");
@@ -74,12 +74,12 @@ function AddChildren (){
             console.log("Exito al traer los documentos!");
             setTimeout(() => {
                 var isLogged= hideShowClass("delete");
+                if(isLogged){
+                    $(".admin_only.delete").css("display","block");
+                }else{
+                        $(".admin_only.delete").css("display","none");
+                }
             }, 3000);
-            if(isLogged){
-                $(".admin_only.delete").css("display","block");
-            }else{
-                    $(".admin_only.delete").css("display","none");
-            }
         }else{
             $("#pdf_div").append('<span id="noarchivopdf">No se halló ningún archivo.</span>');
             console.log("No se halló un archivo o se eliminó directamente desde la plataforma firebase.");
