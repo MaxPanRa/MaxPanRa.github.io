@@ -23,7 +23,7 @@ $(document).ready(function(){
                     console.log("url: "+url); 
                     $("#pdf_"+data.key).remove();
                     $("."+SNAPPED.tipo).css("display","block");
-                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChild(event);" style="color: #ab4949;margin-left: -20px;margin-top: 6px;font-size: 14px;position: absolute;display:none;"><i class="fa fa-trash"></i></span>'+
+                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChild(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
                                          "<a href='"+url+"' id='pdf_"+data.key+"' target='_blank' download='true'>"+SNAPPED.nombre+"</br></a>");
                   }).catch(function(error) {
                     SNAPPED.remove()
@@ -65,7 +65,7 @@ function AddChildren (){
                     console.log("url: "+url); 
                     $("#pdf_"+data.key).remove();
                     $("."+SNAPPED.tipo).css("display","block");
-                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChild(event);" style="color: #ab4949;margin-left: -20px;margin-top: 6px;font-size: 14px;position: absolute;display:none;"><i class="fa fa-trash"></i></span>'+
+                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChild(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
                                          "<a href='"+url+"' id='pdf_"+data.key+"' target='_blank' download='true'>"+SNAPPED.nombre+"</br></a>");
                   }).catch(function(error) {
                     SNAPPED.remove()
@@ -89,7 +89,7 @@ function AddChildren (){
 }
 
 function RemoveChild (e){
-    console.log(e);
+    console.log(e.target.parentNode.NextSibling.id);
 }
 function hideShowClass(classString){
     var logged=false;

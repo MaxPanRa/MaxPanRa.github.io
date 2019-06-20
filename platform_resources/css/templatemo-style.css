@@ -1040,3 +1040,13 @@ button#myBtnLogin:hover {
 background-color: #5b627d;
 outline: 1px solid slategrey;
 }
+
+span.admin_only.delete {
+  color: rgb(171, 73, 73);
+  margin-left: -20px;
+  margin-top: 6px;
+  margin-bottom: -20px;
+  font-size: 14px;
+  position: relative !important;
+  display: block;
+}
