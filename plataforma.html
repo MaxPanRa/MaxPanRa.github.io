@@ -17,9 +17,12 @@
         <script src="./assets/js/modernizr-2.8.3.min.js"></script>
         <script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-app.js"></script>
         <script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-database.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-auth.js"></script>
         <script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-firestore.js"></script>
         <script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-storage.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/5.6.0/firebase.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/5.5.2/firebase.js"></script>
+        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/aes.js"></script>
     </head>
     <body>
         <!--[if lt IE 7]>
@@ -177,38 +180,28 @@
                                 <div class="col-md-8 col-sm-8">
                                     <div class="box-content">
                                         <h3 class="widget-title">Send Us A Message</h3>
-                                        <form class="contact-form">
-                                            <fieldset>
-                                                <input type="text" class="name" id="name" placeholder="Name...">
-                                            </fieldset> 
-                                            <fieldset>
-                                                <input type="email" class="email" id="email" placeholder="Email...">
-                                            </fieldset> 
-                                            <fieldset>
-                                                <input type="text" class="subject" id="subject" placeholder="Subject...">
-                                            </fieldset>
-                                            <fieldset>
-                                                <textarea name="message" id="message" cols="30" rows="4" placeholder="Message.."></textarea>
-                                            </fieldset>
-                                            <fieldset>
-                                                <input type="submit" class="button" id="button" value="Send Message">
-                                            </fieldset>
+                                        <form enctype="multipart/form-data" method="POST" action="/" class="img_uploader admin_only" style="display:block" encrypted="false" crypt="">
+                                            <input type="file" name="file" accept="application/pdf" />
+                                            <input type="submit">
                                         </form>
                                     </div>
                                 </div>
                                 <div class="col-md-4 col-sm-4">
-                                    <div class="box-content">
-                                        <h3 class="widget-title">Stay In Touch</h3>
-                                        <p>Sed ullamcorper, risus a tincidunt efficitur, massa mauris ultricies leo, eu interdum eros erat non augue. <br><br>
-										Suspendisse ornare sollicitudin lectus non egestas. Nam fermentum imperdiet ligula congue venenatis. </p>
-                                        <div class="about-social">
-                                            <ul>
-                                                <li><a href="#" class="fa fa-facebook"></a></li>
-                                                <li><a href="#" class="fa fa-twitter"></a></li>
-                                                <li><a href="#" class="fa fa-linkedin"></a></li>
-                                                <li><a href="#" class="fa fa-dribbble"></a></li>
-                                            </ul>
-                                        </div>
+                                    <div id="pdf_div" class="box-content">
+                                        <h3 class="widget-title">Documentos PDF</h3>
+                                    </div>
+                                    <div class="pdf_uploader admin_only" style="display:block" encrypted="false" crypt="">
+                                        <input type="file" name="file" accept="application/pdf" onchange='openFile(event)'/>
+                                        <label for="file" onclick="cargarArchivo();">Cargar Archivo...  </label>
+                                        <select  id="content_type_input">
+                                          <option value="Documento" selected>Documento</option>
+                                          <option value="Articulo">Artículo</option>
+                                          <option value="Proyecto">Proyecto</option>
+                                          <option value="Tesis">Tésis</option>
+                                          <option value="Estudio">Estudio</option>
+                                          <option value="Libro">Libro</option>
+                                        </select>
+                                        <button>Subir Archivo</button>
                                     </div>
                                 </div>
                             </div>
@@ -243,15 +236,7 @@
         
         <!-- The Modal -->
         <div id="myModal" class="modal">
-            <!-- Modal content -->
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <p>Some text in the Modal..</p>
-            <div>
-                <input name="username" type="text" class="username col-md-6 col-sm-12" id="username" placeholder="Nombre de Usuario">
-                <input name="password" type="password" class="password col-md-6 col-sm-12" id="password" placeholder="Contraseña">
-            </div>
-        </div>
+            Cargando...
         </div>
         
 
@@ -261,94 +246,17 @@
                 <div class="row">
                     <div class="col-md-12 text-center">
                         <p>
-                            Copyright &copy; 2084 Company Name 
+                            Copyright &copy; 2019 Laboratorio Optiserv
                         </p>
                             <!-- Trigger/Open The Modal -->
-                            <button lang="es" id="myBtn">Iniciar Sesión</button>
+                            <button lang="es" id="myBtnLogin" style="" onclick="GoogleSignIn();">Iniciar Sesión</button>
+                            <button lang="es" id="myBtnLogout" style="display:none;margin: 0 auto;background: #828282;border-radius: 10px;"onclick="GoogleSignOut();">Cerrar Sesión</button>
                     </div>
 
-                            <script>
-                            // Get the modal
-                            var modal = document.getElementById('myModal');
-
-                            // Get the button that opens the modal
-                            var btn = document.getElementById("myBtn");
-
-                            // Get the <span> element that closes the modal
-                            var span = document.getElementsByClassName("close")[0];
-
-                            // When the user clicks the button, open the modal 
-                            btn.onclick = function() {
-                            modal.style.display = "block";
-                            }
-
-                            // When the user clicks on <span> (x), close the modal
-                            span.onclick = function() {
-                            modal.style.display = "none";
-                            }
-
-                            // When the user clicks anywhere outside of the modal, close it
-                            window.onclick = function(event) {
-                            if (event.target == modal) {
-                                modal.style.display = "none";
-                            }
-                            }
-                            </script>
                             <style>
-                            /* The Modal (background) */
-                            .modal {
-                            display: none; /* Hidden by default */
-                            position: fixed; /* Stay in place */
-                            z-index: 99; /* Sit on top */
-                            padding-top: 100px; /* Location of the box */
-                            left: 0;
-                            top: 0;
-                            width: 100%; /* Full width */
-                            height: 100%; /* Full height */
-                            overflow: auto; /* Enable scroll if needed */
-                            background-color: rgb(0,0,0); /* Fallback color */
-                            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-                            }
 
-                            /* Modal Content */
-                            .modal-content {
-                            background-color: #fefefe;
-                            margin: auto;
-                            padding: 20px;
-                            border: 1px solid #888;
-                            width: 80%;
-                            }
-
-                            /* The Close Button */
-                            .close {
-                            color: #aaaaaa;
-                            float: right;
-                            font-size: 28px;
-                            font-weight: bold;
-                            }
-
-                            .close:hover,
-                            .close:focus {
-                            color: #000;
-                            text-decoration: none;
-                            cursor: pointer;
-                            }
-                            .modal-content p{
-                                color:black;
-                            }
-                            button#myBtn {
-                                background: #061b36;
-                                border: 2px solid #071427;
-                                border-radius: 10px;
-                                letter-spacing: 2px;
-                            }
-                            button#myBtn:hover {
-                                background: #375377;
-                                border: 2px solid #1c3150;
-                            }
                             </style>
                         
-                    <!-- | Design: <a href="http://www.templatemo.com" target="_parent"><span class="green">free templates</span></a> -->
                         </p>
                     </div>
                 </div>
@@ -358,14 +266,61 @@
         <script src="platform_resources/js/plugins.js"></script>
         <script src="platform_resources/js/main.js"></script>
 
+        <script>
+        //Variables Globales
+        var filePDF; //Archivo PDF Subido
+        var fileLabel=$(".pdf_uploader input + label"); //Etiqueta de Input de Subida
+        </script>
         <script src="platform_resources/js/home.js"></script>
-        <script src="platform_resources/js/login.js"></script>
         <script src="platform_resources/js/documents.js"></script>
+        <script src="platform_resources/js/login.js"></script>
+        <script>
+        var openFile = function(event) {
+            var input = event.target;
+            filePDF = input.files[0];
+            //console.log(file.lastModifiedDate);
+            //console.log(file.name);
+            fileLabel.text("Archivo Subido!");
+            fileLabel[0].style.background="#b3b3b3";
+        };
         
-        <script> 
-        /*-------- SCRIPTS PARA AGREGAR LOS HTMLS APARTE CON JQUERY ---------*/
-            
-        </script> 
-		<!-- templatemo 439 rectangle -->
+        function cargarArchivo(){
+            $(".pdf_uploader input").click();
+        }
+       
+        //Referencia a botones de subida
+        $(".pdf_uploader button").click(function(){
+            var databaseRef = firebase.database().ref('/Referencia_Documentos/PDF');
+            var content_type = document.getElementById("content_type_input").value;
+
+            var storageRef = firebase.storage().ref();
+            var pdfRef = storageRef.child('PDF');
+            console.log("filename:"+filePDF.name);
+            console.log("LMD:"+filePDF.lastModifiedDate);
+            if(filePDF != null && filePDF != undefined){
+                var pdf = pdfRef.child(filePDF.name);
+                databaseRef.push().set({
+                    nombre: filePDF.name,
+                    url: "PDF/"+filePDF.name,
+                    tipo:content_type
+                });
+                
+                var loading = document.getElementById("myModal");
+                for(var i=0;i<1000;i++)
+                    loading.style.display = "block";
+                
+                pdf.put(filePDF).then(function(snapshot) {
+                  console.log('Uploaded a PDF!');
+                  console.log(snapshot);
+                  AddChildren();
+                  for(var i=1000;i>0;i--)
+                    loading.style.display = "none";
+                });
+            }else{
+                alert("Aún no ha subido ningún documento PDF");
+            }
+        });
+        </script>
+		
     </body>
-</html>
+    </html>

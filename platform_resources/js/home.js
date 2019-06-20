@@ -38,9 +38,5 @@ $("#dudasSubmit").click(function(){
         empresa: empresa,
         "dudas o sugerencias":dudas
       });
-    name = "";
-    email= "";
-    empresa= "";
-    tel= "";
-    dudas= "";
+      location.reload();
 });
