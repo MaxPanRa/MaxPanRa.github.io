@@ -93,12 +93,6 @@ function RemoveChildPDF (e){
     var removeID = e.target.parentNode.nextSibling.id;
     var toDelete = removeID.split("pdf_")[1];
     var url = "https://firebasestorage.googleapis.com/v0/b/optiserv-lab.appspot.com/o/";
-    e.target.parentNode.nextSibling.remove();
-    e.target.parentNode.remove();
-    console.log("Padre: "+e.target.parentNode.parentNode);
-    console.log("Nodos hijos? "+e.target.parentNode.parentNode.hasChildNodes());
-
-    console.log("# hijos: "+e.target.parentNode.parentNode.children.length);
 
     var databaseRef = firebase.database().ref('/Referencia_Documentos/PDF');
     databaseRef.orderByChild("nombre").on("value", (snapshot)=> {
@@ -107,11 +101,12 @@ function RemoveChildPDF (e){
             snapshot.forEach(function(data) {
               var SNAPPED = data.val();
                 if(removeID==data.key){
-
-                    //databaseRef.child(data.key).remove();
+                    databaseRef.child(data.key).remove();
                     console.log("Éxito al borrar el documento!");
-                    //e.target.parentNode.nextSibling.remove();
-                    //e.target.parentNode.remove();
+                    e.target.parentNode.nextSibling.remove();
+                    if(e.target.parentNode.parentNode.children.length < 5)
+                        e.target.parentNode.parentNode.remove();
+                    e.target.parentNode.remove();
                 }            
             });
         }else{
