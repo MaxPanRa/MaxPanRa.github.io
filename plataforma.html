@@ -318,7 +318,7 @@
                 pdf.put(filePDF).then(function(snapshot) {
                   console.log('Uploaded a PDF!');
                   console.log(snapshot);
-                  AddChildren();
+                  AddChildrenPDF();
                   for(var i=1000;i>0;i--)
                     loading.style.display = "none";
                 });

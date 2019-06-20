@@ -23,7 +23,7 @@ $(document).ready(function(){
                     console.log("url: "+url); 
                     $("#pdf_"+data.key).remove();
                     $("."+SNAPPED.tipo).css("display","block");
-                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChild(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
+                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChildPDF(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
                                          "<a href='"+url+"' id='pdf_"+data.key+"' target='_blank' download='true'>"+SNAPPED.nombre+"</br></a>");
                   }).catch(function(error) {
                     SNAPPED.remove()
@@ -47,7 +47,7 @@ $(document).ready(function(){
   
 });
 
-function AddChildren (){
+function AddChildrenPDF (){
     var url = "https://firebasestorage.googleapis.com/v0/b/optiserv-lab.appspot.com/o/";
    var databaseRef = firebase.database().ref('/Referencia_Documentos/PDF');
     databaseRef.orderByChild("nombre").on("value", (snapshot)=> {
@@ -65,7 +65,7 @@ function AddChildren (){
                     console.log("url: "+url); 
                     $("#pdf_"+data.key).remove();
                     $("."+SNAPPED.tipo).css("display","block");
-                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChild(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
+                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChildPDF(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
                                          "<a href='"+url+"' id='pdf_"+data.key+"' target='_blank' download='true'>"+SNAPPED.nombre+"</br></a>");
                   }).catch(function(error) {
                     SNAPPED.remove()
@@ -88,8 +88,33 @@ function AddChildren (){
       //Aqui termina para cada que se agrega un documento nuevo
 }
 
-function RemoveChild (e){
-    console.log(e.target.parentNode.NextSibling.id);
+function RemoveChildPDF (e){
+    console.log(e.target.parentNode.nextSibling.id);
+    var removeID = e.target.parentNode.nextSibling.id;
+    var toDelete = removeID.split("pdf_")[1];
+    var url = "https://firebasestorage.googleapis.com/v0/b/optiserv-lab.appspot.com/o/";
+    var databaseRef = firebase.database().ref('/Referencia_Documentos/PDF');
+    databaseRef.orderByChild("nombre").on("value", (snapshot)=> {
+        console.log(snapshot.val());
+        if(snapshot.val() != undefined && snapshot.val() != null){
+            snapshot.forEach(function(data) {
+              var SNAPPED = data.val();
+              debuger;
+                console.log("Document ID: " + SNAPPED.id);
+                const pdf = pdfRef.child(SNAPPED.id);
+                  pdf.getDownloadURL().then((url) => { 
+                    console.log("url: "+url); 
+                  }).catch(function(error) {
+                    //SNAPPED.remove();
+                });
+            });
+            console.log("Exito al borrar el documento!");
+        }else{
+            //$("#pdf_div").append('<span id="noarchivopdf">No se halló ningún archivo.</span>');
+            console.log("No se pudo eliminar el archivo!");
+        }
+      });
+      //Aqui termina para cada que se agrega un documento nuevo
 }
 function hideShowClass(classString){
     var logged=false;
