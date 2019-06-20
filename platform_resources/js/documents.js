@@ -100,6 +100,8 @@ function RemoveChildPDF (e){
         if(snapshot.val() != undefined && snapshot.val() != null){
             snapshot.forEach(function(data) {
               var SNAPPED = data.val();
+              console.log("id target :"+removeID);
+              console.log("id snappd :"+data.key);
                 if(removeID==data.key){
                     databaseRef.child(data.key).remove();
                     console.log("Éxito al borrar el documento!");
