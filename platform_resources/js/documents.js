@@ -100,13 +100,13 @@ function RemoveChildPDF (e){
             snapshot.forEach(function(data) {
               var SNAPPED = data.val();
                 if(removeID==data.key){
-                    SNAPPED.remove();
+                    //databaseRef.child(data.key).remove();
                     console.log("Éxito al borrar el documento!");
                     console.log("Padre: "+e.target.parentNode.parentNode);
                     console.log("Nodos hijos? "+e.target.parentNode.parentNode.hasChildNodes());
                     console.log("# hijos: "+e.target.parentNode.parentNode.children.length);
-                    /*e.target.parentNode.nextSibling.remove();
-                    e.target.parentNode.remove();*/
+                    //e.target.parentNode.nextSibling.remove();
+                    //e.target.parentNode.remove();
                 }            
             });
         }else{
