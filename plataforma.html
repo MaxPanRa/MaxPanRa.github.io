@@ -13,6 +13,7 @@
         <link rel="stylesheet" href="platform_resources/css/bootstrap.min.css">
         <link rel="stylesheet" href="platform_resources/css/templatemo-style.css">
         <link href="https://fonts.googleapis.com/css?family=Montserrat|Roboto" rel="stylesheet">
+        <link rel="stylesheet" href="./assets/css/jquery.fancybox.min.css">
         <!-- modernizr css -->
         <script src="./assets/js/modernizr-2.8.3.min.js"></script>
         <script src="https://www.gstatic.com/firebasejs/5.5.2/firebase-app.js"></script>
@@ -62,9 +63,9 @@
                     <li>
                         <a class="show-2 mapabutton" href="#"><i class="fa fa-map-marked-alt"></i>Mapa de Comercios de Competencia</a>
                     </li>
-                    <li>
-                        <a class="show-3 projectbutton" href="#"><i class="fa fa-chart-line"></i>Fórmulas de Predicción</a>
-                    </li>
+                    <!--<li>
+                        <a class="show-3 projectbutton" href="#"><i class="fa fa-chart-line"></i>Fórmulas de Predicción</a
+                    </li>>-->
                     <li>
                         <a class="show-5 contactbutton" href="#"><i class="fa fa-folder"></i>Documentos y Multimedia</a>
                     </li>
@@ -114,7 +115,7 @@
                         </div>
 
                         <div id="menu-2" class="content about-section">
-                                <iframe id="mapa_locaciones_frame" src="/platform_projects/mapa/index.html" ></iframe>
+                                <iframe id="mapa_locaciones_frame" src="./platform_projects/mapa/index.html" ></iframe>
                         </div>
 
                         <div id="menu-3" class="content gallery-section">
@@ -179,11 +180,10 @@
                             <div class="row">
                                 <div class="col-md-8 col-sm-8">
                                     <div class="box-content">
-                                        <h3 class="widget-title">Send Us A Message</h3>
-                                        <form enctype="multipart/form-data" method="POST" action="/" class="img_uploader admin_only" style="display:block" encrypted="false" crypt="">
-                                            <input type="file" name="file" accept="application/pdf" />
-                                            <input type="submit">
-                                        </form>
+                                        <h3 class="widget-title">Galería</h3>
+                                        <a data-fancybox="gallery" data-caption="Laboratorio Optiserv" href="/assets/img/main_header_1.jpg"><img src="/assets/img/main_header_1.jpg"></a>
+                                        <a data-fancybox="gallery" data-caption="Instalaciones del Laboratorio Optiserv" href="/assets/img/main_header_1.jpg"><img src="/assets/img/main_header_1.jpg"></a>
+
                                     </div>
                                 </div>
                                 <div class="col-md-4 col-sm-4">
@@ -227,9 +227,9 @@
                             <li>
                                 <a class="show-2 mapabutton" href="#"><i class="fa fa-map-marked-alt"></i>Mapa de Comercios Competidores</a>
                             </li>
-                            <li>
+                            <!--<li>
                                 <a class="show-3 projectbutton" href="#"><i class="fa fa-chart-line"></i>Fórmulas de Predicción</a>
-                            </li>
+                            </li>-->
                             <li>
                                 <a class="show-5 contactbutton" href="#"><i class="fa fa-folder"></i>Documentos y Multimedia</a>
                             </li>
@@ -269,6 +269,7 @@
             </div>
         </div> <!-- .site-footer -->
         <script src="./assets/js/jquery-3.2.0.min.js"></script>
+        <script src="./assets/js/jquery.fancybox.min.js"></script>
         <script src="platform_resources/js/plugins.js"></script>
         <script src="platform_resources/js/main.js"></script>
 

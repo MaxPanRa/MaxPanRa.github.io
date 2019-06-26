@@ -101,7 +101,7 @@ function RemoveChildPDF (e){
         console.log(snapshot.val());
         if(snapshot.val() != undefined && snapshot.val() != null){
             snapshot.forEach(function(data) {
-              var SNAPPED = data.val();
+                var SNAPPED = data.val();
                 if(toDelete==data.key){
                     console.log("Éxito al borrar el documento!");
                     // BORRAR DE LA VISTA
@@ -116,11 +116,11 @@ function RemoveChildPDF (e){
                     }).catch(function(error) {
                     });
                     // BORRAR DE DATABASE
+                    $('.del_'+toDelete).remove();
                     databaseRef.child(data.key).remove();
                 }            
             });
         }else{
-            $('.del_'+data.key).remove();
             console.log("No se pudo eliminar el archivo!");
         }
       });
