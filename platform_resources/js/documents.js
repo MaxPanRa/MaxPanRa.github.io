@@ -79,7 +79,7 @@ function AddChildrenPDF (){
                 }else{
                         $(".admin_only.delete").css("display","none");
                 }
-            }, 3000);
+            }, 500);
         }else{
             $("#pdf_div").append('<span id="noarchivopdf">No se halló ningún archivo.</span>');
             console.log("No se halló un archivo o se eliminó directamente desde la plataforma firebase.");
