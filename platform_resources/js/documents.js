@@ -122,8 +122,6 @@ function RemoveChildPDF (e){
             });
         }else{
             console.log("No se pudo eliminar el archivo!");
-            $(".fa-trash").remove();
-            $("#pdf_div b").hide();
         }
       });
       //Aqui termina para cada que se agrega un documento nuevo
