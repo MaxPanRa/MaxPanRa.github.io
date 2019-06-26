@@ -114,13 +114,13 @@ function RemoveChildPDF (e){
                     removeRef.delete().then(function() {
                     // File deleted successfully
                     }).catch(function(error) {
-                    // Uh-oh, an error occurred!
                     });
                     // BORRAR DE DATABASE
                     databaseRef.child(data.key).remove();
                 }            
             });
         }else{
+            $('.del_'+data.key).remove();
             console.log("No se pudo eliminar el archivo!");
         }
       });
