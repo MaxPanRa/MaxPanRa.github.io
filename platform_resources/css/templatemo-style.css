@@ -1053,7 +1053,7 @@ span.admin_only.delete {
 
 .gallery-img{    
   width: 100%;
-  height: auto;
+  height: 130px;
   object-fit: cover;
   margin-top: 15px;
 }
