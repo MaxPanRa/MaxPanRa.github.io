@@ -1055,4 +1055,5 @@ span.admin_only.delete {
   width: 100%;
   height: auto;
   object-fit: cover;
+  margin-top: 15px;
 }
