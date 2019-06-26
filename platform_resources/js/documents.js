@@ -23,7 +23,8 @@ $(document).ready(function(){
                     console.log("url: "+url); 
                     $("#pdf_"+data.key).remove();
                     $("."+SNAPPED.tipo).css("display","block");
-                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChildPDF(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
+                    $('.del_'+data.key).remove();
+                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete del_'+data.key+'" encrypted="false" crypt="" onclick="RemoveChildPDF(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
                                          "<a href='"+url+"' id='pdf_"+data.key+"' target='_blank' download='true'>"+SNAPPED.nombre+"</br></a>");
                   }).catch(function(error) {
                     SNAPPED.remove()
@@ -65,7 +66,8 @@ function AddChildrenPDF (){
                     console.log("url: "+url); 
                     $("#pdf_"+data.key).remove();
                     $("."+SNAPPED.tipo).css("display","block");
-                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete" encrypted="false" crypt="" onclick="RemoveChildPDF(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
+                    $('.del_'+data.key).remove();
+                    $("#pdf_div ."+SNAPPED.tipo).append('<span class="admin_only delete del_'+data.key+'" encrypted="false" crypt="" onclick="RemoveChildPDF(event);" style="display:none;"><i class="fa fa-trash"></i></span>'+
                                          "<a href='"+url+"' id='pdf_"+data.key+"' target='_blank' download='true'>"+SNAPPED.nombre+"</br></a>");
                   }).catch(function(error) {
                     SNAPPED.remove()
@@ -82,8 +84,6 @@ function AddChildrenPDF (){
             }, 500);
         }else{
             $("#pdf_div").append('<span id="noarchivopdf">No se halló ningún archivo.</span>');
-            $(".fa-trash").remove();
-            $("#pdf_div b").hide();
             console.log("No se halló un archivo o se eliminó directamente desde la plataforma firebase.");
         }
       });
@@ -105,10 +105,10 @@ function RemoveChildPDF (e){
                 if(toDelete==data.key){
                     console.log("Éxito al borrar el documento!");
                     // BORRAR DE LA VISTA
-                    e.target.parentNode.nextSibling.remove();
-                    if(e.target.parentNode.parentNode.children.length < 5)
-                        e.target.parentNode.parentNode.remove();
-                    e.target.parentNode.remove();
+                    $('.del_'+data.key).remove();
+                    $('#pdf_'+data.key).remove();
+                    if($("."+SNAPPED.tipo+" b").siblings().length == 1)
+                        $("."+SNAPPED.tipo).css("display","none");
                     // BORRAR DE STORAGE
                     var removeRef = storageRef.child('PDF/'+SNAPPED.nombre);
                     removeRef.delete().then(function() {
