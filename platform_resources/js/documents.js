@@ -82,6 +82,8 @@ function AddChildrenPDF (){
             }, 500);
         }else{
             $("#pdf_div").append('<span id="noarchivopdf">No se halló ningún archivo.</span>');
+            $(".fa-trash").remove();
+            $("#pdf_div b").hide();
             console.log("No se halló un archivo o se eliminó directamente desde la plataforma firebase.");
         }
       });
@@ -120,6 +122,8 @@ function RemoveChildPDF (e){
             });
         }else{
             console.log("No se pudo eliminar el archivo!");
+            $(".fa-trash").remove();
+            $("#pdf_div b").hide();
         }
       });
       //Aqui termina para cada que se agrega un documento nuevo
