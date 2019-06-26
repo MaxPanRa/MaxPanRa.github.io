@@ -1050,3 +1050,9 @@ span.admin_only.delete {
   position: relative !important;
   display: block;
 }
+
+.gallery-img{    
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
