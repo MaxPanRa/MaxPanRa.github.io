@@ -1,0 +1,12 @@
+.xlsx:before,.csv:before,.txt:before{
+    background-size: contain !important;
+}
+.csv:before{
+    background-color:#7dbee4 !important;
+}
+.xlsx:before{
+    background-color:#289838 !important;
+}
+.txt:before{
+    background-color:#c1c1c1 !important;
+}

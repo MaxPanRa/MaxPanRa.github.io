@@ -1,0 +1,152 @@
+<html>
+	<head>
+		<title>Charts</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        
+        <link rel="stylesheet" href="./css/styles.css"/>
+        <link rel="stylesheet" href="./css/bootstrap.min.css"/>
+        <link href="./css/tableexport.min.css" rel="stylesheet">
+
+        <link href="https://fonts.googleapis.com/css?family=Roboto+Condensed" rel="stylesheet">
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.css" rel="stylesheet">
+	</head>
+	<body>
+	
+        <div class="table-responsive">
+            <table id="tabla_optiserv" class="table table-bordered">
+                <thead>
+                <tr class="row-0">
+                    <td>Nombre</td>
+                    <td>Posición</td>
+                    <td>Extra</td>
+                    <td>Otros</td>
+                    <td class="disabled"></td>
+                </tr>
+                </thead>
+                <tbody>
+                <tr class="row-1">
+                    <td><input type="text" value="Thor Walton"/></td>
+                    <td> <input type="text" value="Director Regional"/></td>
+                    <td> <input type="text" value="45"/></td>
+                    <td> <input type="text" value="$98,540"/></td>
+                </tr>
+                </tbody>
+            </table>
+            <button id="rowAdder" onclick="addRow();">Agregar Fila</button>
+            <button id="undoLast" onclick="undoLast();" style="display:none;">Deshacer Última Acción</button>
+        </div>
+
+    <script type="text/javascript" src="./js/jquery-1.11.2.min.js"></script>
+    <script src="./js/bootstrap.min.js"></script>
+    <!-- ChartJS Plugin (Graficas) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.js"></script>
+    <!-- TableExport Plugin (Exportar a Excel)-->
+    <script src="./js/xlsx.core.min.js"></script>
+    <script src="./js/Blob.js"></script>
+    <script src="./js/FileSaver.js"></script>
+    <script src="./js/tableexport.js"></script>
+
+    <script>
+
+        // Bootstrap configuration classes ["base", "theme", "container"].
+        TableExport.prototype.bootstrap = ["btn", "btn-default", "btn-toolbar"];
+        // **** jQuery **************************
+        // $.fn.tableExport.bootstrap = ["btn", "btn-link", "btn-toolbar"];
+        // **************************************
+        var $tabla=$("#tabla_optiserv");
+        reloadExport(); 
+
+        function reloadExport(){
+            $(".xlsx").remove();
+            $(".csv").remove();
+            $(".txt").remove();
+            $(".removeRow").parent().remove();
+            
+            inputATexto();
+            
+            $tabla.tableExport({
+                bootstrap: true
+            });
+
+            textoAInput();
+
+            $("#"+$tabla[0].id+" tr").each(function(id,element){
+                if(id==0)return;
+                let td = document.createElement("td");
+                let button= document.createElement("button");
+                button.classList.add("removeRow");
+                button.setAttribute("onclick","removeRow(event);");
+                button.innerText="Eliminar Fila";
+                td.appendChild(button);
+                element.appendChild(td);
+            });
+
+            $(".xlsx").text("Exportar XLSX");
+            $(".csv").text("Exportar CSV");
+            $(".txt").text("Exportar TXT");
+
+            $("#"+$tabla[0].id+" input").focusout(function() {
+                reloadExport();
+            });
+        } 
+
+        function addRow(){
+            var row = $("#"+$tabla[0].id+" tbody").children().last().attr("class");
+            var row_number = parseFloat(row.split("row-")[1]);
+            var row_html = '<tr class="row-'+(row_number+1)+'">'+
+                '<td><input type="text" value=""/></td>'+
+                '<td> <input type="text" value=""/></td>'+
+                '<td> <input type="text" value=""/></td>'+
+                '<td> <input type="text" value=""/></td>'+
+            '</tr>';
+
+            $tabla.append(row_html);
+                
+            reloadExport();
+        }
+
+        function removeRow(evento){
+            var eventoPadre = evento.currentTarget.parentNode.parentNode;
+            eventoPadre.style.display="none";
+            eventoPadre.remove();
+            //$("body").append(eventoPadre);
+            reloadExport();
+            //$("#undoLast").show();
+            //$("#undoLast").attr("onclick","undoLast('"+eventoPadre.className+"');");
+        }
+
+        function undoLast(lastClass){
+            $tabla.append($("."+lastClass));
+            $("."+lastClass).show();
+            let td = document.createElement("td");
+            let button= document.createElement("button");
+            button.classList.add("removeRow");
+            button.setAttribute("onclick","removeRow(event);");
+            button.innerText="Eliminar Fila";
+            td.appendChild(button);
+            $("."+lastClass)[0].appendChild(td);
+            $("#undoLast").hide();
+            reloadExport();
+        }
+    
+        function inputATexto(){
+            $("#"+$tabla[0].id+" input").each(function(id,element){
+                element.parentNode.classList.add("inp");
+                element.replaceWith(element.value);
+            });
+        }
+
+        function textoAInput(){
+            $(".inp").each(function(id,element){
+                let input = document.createElement("input");
+                input.value=element.innerText;
+                element.innerText=null;
+                element.appendChild(input);
+                element.classList.remove("inp");
+            });
+        }
+
+    </script>
+    </body>
+</html>
