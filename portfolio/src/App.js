@@ -4,63 +4,65 @@ import { Animator, ScrollContainer, ScrollPage, batch, Fade, FadeIn, FadeOut, Mo
 import "./App.css";
 
 const ZoomInScrollOut = batch(StickyIn(), FadeIn(), ZoomIn());
+const FadeInZoomIn = batch(FadeIn(),ZoomIn());
+const FadeInZoomOut = batch(FadeIn(),ZoomOut());
 const FadeUp = batch(Fade(), Move(), Sticky());
 
 class App extends Component {
   render() { 
     return(
-      <div>
+      <div class="black-bg">
         <ScrollContainer>
           <ScrollPage>
-            <Animator animation={batch(Fade(), Sticky(), MoveOut(0, -200))}>
-              <div class="container-wallpaper" id="page-1">
-                <div class="container">
-                  <span class="white-text" style={{ fontSize: "30px" }}>
-                  <Animator animation={MoveIn(-1000, 0)}>¡Hola! 👋🏻</Animator>
-                  <Animator animation={MoveIn(1000, 0)}>¡Hola! 👋🏻</Animator>
+          <div className="container" id="page-0" >
+                  <span style={{ fontSize: "40px" }}>
+                    <Animator animation={batch(MoveOut(0,700))}>Hola 👋🏻</Animator>
+                  </span>
+                </div>
+          </ScrollPage>
+          <ScrollPage>
+          <Animator animation={FadeInZoomIn}>
+              <div className="container-wallpaper" id="page-1" >
+                <div className="container">
+                  <span style={{ fontSize: "40px" }}>
+                    <Animator animation={MoveIn(100,0)}>Hola 👋🏻</Animator>
+                    <Animator animation={MoveIn(200,0)}>Hola 2 👋🏻</Animator>
                   </span>
                 </div>
               </div>
             </Animator>
           </ScrollPage>
           <ScrollPage>
-            <Animator animation={ZoomInScrollOut}>
-            <div class="container-wallpaper" id="page-1">
-                <div class="container">
-                  <span class="white-text" style={{ fontSize: "30px" }}>Let me show you scroll animation 😀</span>
+            <Animator animation={FadeInZoomIn}>
+              <div className="container-wallpaper" id="page-2" >
+                <div className="container">
+                  <span style={{ fontSize: "40px" }}>
+                    <Animator animation={MoveIn(100,0)}>Hola 👋🏻</Animator>
+                    <Animator animation={MoveIn(200,0)}>Hola 2 👋🏻</Animator>
+                  </span>
                 </div>
               </div>
             </Animator>
           </ScrollPage>
           <ScrollPage>
-            <Animator animation={FadeUp}>
-            <div class="container-wallpaper" id="page-1">
-                <div class="container">
-                  <span class="white-text" style={{ fontSize: "30px" }}>Let me show you scroll animation 😀</span>
+            <Animator animation={FadeInZoomIn}>
+            <div className="container-wallpaper" id="page-3">
+                <div className="container">
+                  <span className="white-text" style={{ fontSize: "30px" }}>Let me show you scroll animation 😀</span>
                 </div>
               </div>
             </Animator>
           </ScrollPage>
           <ScrollPage>
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100%" }} >
-              <span style={{ fontSize: "40px" }}>
-                <Animator animation={MoveIn(-1000, 0)}>Hello Guys 👋🏻</Animator>
-                <Animator animation={MoveIn(1000, 0)}>Nice to meet you 🙋🏻‍♀️</Animator>
-                - I'm Dante Chun -
-                <Animator animation={MoveOut(1000, 0)}>Good bye ✋🏻</Animator>
-                <Animator animation={MoveOut(-1000, 0)}>See you 💛</Animator>
-              </span>
-            </div>
-          </ScrollPage>
-          <ScrollPage>
-            <Animator animation={batch(Fade(), Sticky())}>
-              <span style={{ fontSize: "40px" }}>Done</span>
-              <br/>
-              <span style={{ fontSize: "30px" }}>
-                There's FadeAnimation, MoveAnimation, StickyAnimation, ZoomAnimation
-              </span>
+            <Animator animation={FadeInZoomIn}>
+            <div className="container-wallpaper" id="page-4">
+                <div className="container">
+                  <span className="white-text" style={{ fontSize: "30px" }}>Let me show you scroll animation 😀</span>
+                </div>
+              </div>
             </Animator>
           </ScrollPage>
+          
         </ScrollContainer>
         
       </div>

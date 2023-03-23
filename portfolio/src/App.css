@@ -1,6 +1,26 @@
+.black-bg{
+  background:black;
+}
 .container-wallpaper {
   background-size: cover !important;
   /* background-blend-mode: screen !important; */
+}
+.container {
+  background: #000000ba;
+  border-radius: 25px;
+  color: white;
+  padding: 20px;
+  font-family: math;
+  width: 50%;
+  height: 50%;
+  transform: translate(0%, -40%);
+}
+
+.container div {
+  height: auto;
+}
+div#page-0 {
+  background: url("./img/0.png");
 }
 div#page-1 {
   background: url("./img/1.png");
@@ -8,13 +28,13 @@ div#page-1 {
 div#page-2 {
   background: url("./img/2.png");
 }
-/*
+
 div#page-3 {
   background: url("./img/3.png");
 }
 div#page-4 {
   background: url("./img/4.png");
-}*/
+}
 div {
   width: 100%;
   height: 100%;
