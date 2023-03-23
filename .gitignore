@@ -7,7 +7,7 @@ portfolio/node_modules
 
 # testing
 /coverage
-
+portfolio/build
 # production
 
 
