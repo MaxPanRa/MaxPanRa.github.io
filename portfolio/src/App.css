@@ -1,3 +1,7 @@
+.container-wallpaper {
+  background-size: cover !important;
+  /* background-blend-mode: screen !important; */
+}
 div#page-1 {
   background: url("./img/1.png");
 }
