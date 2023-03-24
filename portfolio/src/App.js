@@ -210,9 +210,9 @@ class App extends Component {
               </Animator>
             </ScrollPage>
           </ScrollContainer>
-          <ul class="fireflies" id="firef">
+          {/*<ul class="fireflies" id="firef">
                 <li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li><li></li>
-            </ul>
+    </ul>*/}
         </div>
       </div>
       );
