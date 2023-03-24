@@ -1,26 +1,17 @@
-.black-bg{
-  background:black;
+@import url('https://fonts.googleapis.com/css2?family=Delicious+Handrawn&family=Neucha&family=Patrick+Hand+SC&family=Roboto:wght@400;700;900&family=Slabo+27px&display=swap');
+.roboto {font-family: Roboto;font-weight: 200;
 }
-.container-wallpaper {
-  background-size: cover !important;
-  /* background-blend-mode: screen !important; */
+.handrawn {font-family: "Delicious Handrawn";font-weight: 200;
 }
-.container {
-  background: #000000ba;
-  border-radius: 25px;
-  color: white;
-  padding: 20px;
-  font-family: math;
-  width: 50%;
-  height: 50%;
-  transform: translate(0%, -40%);
+.slabo {font-family: "Slabo 27px";font-weight: 200;
+}
+.neucha {font-family: "Neucha";font-weight: 200;
+}
+.patrick {font-family: "Patrick Hand SC";font-weight: 200;
 }
 
-.container div {
-  height: auto;
-}
 div#page-0 {
-  background: url("./img/0.png");
+  background: url("./img/0-1.png");
 }
 div#page-1 {
   background: url("./img/1.png");
@@ -35,13 +26,536 @@ div#page-3 {
 div#page-4 {
   background: url("./img/4.png");
 }
+div#page-5 {
+  background: url("./img/6.png");
+}
+div#page-6 {
+  background: url("./img/0.png");
+}
+div#page-7 {
+  background: url("./img/5.png");
+}
 div {
   width: 100%;
   height: 100%;
   padding: 0;
 }
+.black-bg{
+  background:black;
+}
+.container-wallpaper {
+  background-size: cover !important;
+  /* background-blend-mode: screen !important; */
+}
+.blur {
+  opacity: 0.7;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* background: #00000087; */
+  /* filter: blur(21px); */
+}
 
+.white-shine {
+  text-shadow: 0 0 10px #ffffff;
+}
+.white {
+  color:white;
+}
+.black {
+  color:black;
+}
+.container {
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 20px;
+  font-family: math;
+  width: 100%;
+  height: auto;
+  transform: translate(0%, -40%);
+}
+
+.container div {
+  height: auto;
+}
 .container {margin: 0 auto;text-align: center;top: 50%;display: block;position: relative;}
 .white-text {
   color: white;
+}
+
+.mpr-img {
+  height: 180px;
+  object-fit: cover;
+  width: 120px;
+  margin-bottom: -150px;
+  top: -150px;
+  position: relative;
+  z-index: -1;
+  filter: saturate(1);
+  border-radius: 55px;
+  box-shadow: 0 0 0px 5px #ffffffd9;
+}
+.lightblue {
+  color: #49d9ff;
+}
+
+.unam-img {
+  height: 100px;
+  margin: 15px;
+}
+
+.gtec-img {
+  height: 100px;
+}
+.b\&w {background-color: black;background-image: linear-gradient(
+  45deg,
+  #ffffff 16.666%, 
+  #d2d2d2 16.666%, 
+  #b6b6b6 33.333%, 
+  #979797 33.333%, 
+  #6b6b6b 50%, 
+  #373737 50%, 
+  #000000 66.666%, 
+  #000000 66.666%, 
+  #090909 83.333%, 
+  #000000 83.333%);font-weight: bold;background-clip: text;background-size: 100%;background-repeat: repeat;
+ -webkit-background-clip: text;-webkit-text-fill-color: transparent;-moz-background-clip: text;-moz-text-fill-color: transparent;padding: 4px;;
+}
+.color {background-color: white;font-weight: bold;background-image: linear-gradient(
+  45deg,
+  #CA4246 16.666%, 
+  #E16541 16.666%, 
+  #E16541 33.333%, 
+  #F18F43 33.333%, 
+  #F18F43 50%, 
+  #8B9862 50%, 
+  #8B9862 66.666%, 
+  #476098 66.666%, 
+  #476098 83.333%, 
+  #A7489B 83.333%);
+  filter: brightness(2.5);
+  background-clip: text;
+  background-size: 100%;
+  background-repeat: repeat;
+  -webkit-background-clip: text;-webkit-text-fill-color: transparent;-moz-background-clip: text;-moz-text-fill-color: transparent;padding: 1px;text-shadow: 0 0 11px #000000;
+ }
+ .mini-container{
+  background: #ffffff87;
+  color: black;
+  padding: 10px 0px;
+  width: 90%;
+  margin: 0 auto;
+  height: auto;
+  position: relative;
+  display: block;
+  border-radius: 135px;
+}
+ ul.fireflies {
+  list-style: none;
+}
+
+li {
+  border-radius: 50%;
+  background-color: rgb(255, 255, 73);
+  background-image: radial-gradient(rgb(249, 206, 36) 5%,
+                                    rgb(254, 179, 4) 25%,
+                                    rgb(252, 191, 7) 60%);
+  box-shadow: 0 0 5px 2px rgb(250, 193, 93), 
+              0 0 20px 10px rgb(255, 228, 140),
+              0 0 40px 15px rgb(255, 219, 41);
+  height: 5px;
+  width: 5px;
+  top: -80px;
+  position: absolute;
+  animation: leftright 10s infinite cubic-bezier(0.39, 0, 0.63, 1),
+      updown 1s infinite 1.25s cubic-bezier(0.39, 0, 0.63, 1),
+      blinking 1s infinite;
+}
+
+/* first 10 */
+li:nth-of-type(1) {
+  animation-delay: 0s;
+  animation-duration: 65s, 81s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+li:nth-of-type(2) {
+  animation-delay: 0s;
+  animation-duration: 80s, 75s, 0.01s;
+}
+
+li:nth-of-type(3) {
+  animation-delay: 0s;
+  animation-duration: 70s, 60s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+li:nth-of-type(4) {
+  animation-delay: 0s;
+  animation-duration: 90s, 80s, 0.01s;
+}
+
+li:nth-of-type(5) {
+  animation-delay: 0.3s;
+  animation-duration: 55s, 75s, 0.01s;
+}
+
+li:nth-of-type(6) {
+  animation-delay: 0s;
+  animation-duration: 79s, 63s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+li:nth-of-type(7) {
+  animation-delay: 0.9s;
+  animation-duration: 70s, 80s, 0.01s;
+}
+
+li:nth-of-type(8) {
+  animation-delay: 1.6s;
+  animation-duration: 50s, 40s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+li:nth-of-type(9) {
+  animation-delay: 1.8s;
+  animation-duration: 77s, 88s, 0.01s;
+}
+
+li:nth-of-type(10) {
+  animation-delay: 3s;
+  animation-duration: 87s, 73s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+/* last 10 */
+li:nth-of-type(11) {
+  animation-delay: 1s;
+  animation-duration: 60s, 78s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+li:nth-of-type(12) {
+  animation-delay: 0.5s;
+  animation-duration: 85s, 80s, 0.01s;
+}
+
+li:nth-of-type(13) {
+  animation-delay: 1.5s;
+  animation-duration: 75s, 66s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+li:nth-of-type(14) {
+  animation-delay: 2.5s;
+  animation-duration: 87s, 75s, 0.01s;
+}
+
+li:nth-of-type(15) {
+  animation-delay: 0.3s;
+  animation-duration: 69s, 85s, 0.01s;
+}
+
+li:nth-of-type(16) {
+  animation-delay: 2.2s;
+  animation-duration: 80s, 77s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+li:nth-of-type(17) {
+  animation-delay: 0.9s;
+  animation-duration: 65s, 88s, 0.01s;
+}
+
+li:nth-of-type(18) {
+  animation-delay: 1.6s;
+  animation-duration: 59s, 63s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+li:nth-of-type(19) {
+  animation-delay: 1.8s;
+  animation-duration: 88s, 79s, 0.01s;
+}
+
+li:nth-of-type(20) {
+  animation-delay: 1s;
+  animation-duration: 59s, 75s, 0.01s;
+  animation-fill-mode: backwards, backwards;
+}
+
+/* animations */
+
+/* It will create the left right movement */
+@keyframes leftright {
+
+  0%,
+  100% {
+      left: 50%;
+  }
+
+  16.666% {
+      left: 95%;
+  }
+
+  33.333% {
+      left: 10%;
+  }
+
+  50% {
+      left: 60%;
+  }
+
+  66.666% {
+      left: 70%;
+  }
+
+  83.333% {
+      left: 5%;
+  }
+}
+
+/* It will create the up down movement */
+@keyframes updown {
+
+  0%,
+  100% {
+      top: -60px;
+  }
+
+  25% {
+      top: 90%;
+  }
+
+  50% {
+      top: 50%;
+  }
+
+  75% {
+      top: 95%;
+  }
+}
+
+/* It will create the blinking effect */
+@keyframes blinking {
+  
+  0%,
+  100% {
+      box-shadow: 0 0 5px 2px rgb(250, 193, 93), 
+                  0 0 10px 5px rgb(255, 242, 63),
+                  0 0 30px 10px rgb(255, 219, 41);
+      height: 0;
+      width: 0;
+  }
+
+  50% {
+      box-shadow: 0 0 5px 2px rgb(250, 193, 93), 
+                  0 0 20px 10px rgb(255, 228, 140),
+                  0 0 40px 15px rgb(255, 219, 41);
+  }
+
+  75% {
+      box-shadow: 0 0 0px 0px rgb(250, 193, 93), 
+                  0 0 0px 0px rgb(255, 228, 140),
+                  0 0 0px 0px rgb(255, 219, 41);
+  }
+}
+ul.fireflies {
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+ul.fireflies li {filter: hue-rotate(91deg);}
+.wrapper {
+  cursor: help;
+  font-size: 20px;
+  margin: 100px 75px 10px 75px;
+  padding: 15px 20px;
+  position: relative;
+  text-align: center;
+  width: 200px;
+  -webkit-transform: translateZ(0); /* webkit flicker fix */
+  -webkit-font-smoothing: antialiased; /* webkit text rendering fix */
+}
+
+.wrapper .tooltip {
+  background: #1496bb;
+  bottom: 100%;
+  color: #fff;
+  display: block;
+  left: -25px;
+  margin-bottom: 15px;
+  opacity: 0;
+  padding: 20px;
+  pointer-events: none;
+  position: absolute;
+  width: 100%;
+  -webkit-transform: translateY(10px);
+     -moz-transform: translateY(10px);
+      -ms-transform: translateY(10px);
+       -o-transform: translateY(10px);
+          transform: translateY(10px);
+  -webkit-transition: all .25s ease-out;
+     -moz-transition: all .25s ease-out;
+      -ms-transition: all .25s ease-out;
+       -o-transition: all .25s ease-out;
+          transition: all .25s ease-out;
+  -webkit-box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.28);
+     -moz-box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.28);
+      -ms-box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.28);
+       -o-box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.28);
+          box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+/* This bridges the gap so you can mouse into the tooltip without it disappearing */
+.wrapper .tooltip:before {
+  bottom: -20px;
+  content: " ";
+  display: block;
+  height: 20px;
+  left: 0;
+  position: absolute;
+  width: 100%;
+}  
+
+/* CSS Triangles - see Trevor's post */
+.wrapper .tooltip:after {
+  border-left: solid transparent 10px;
+  border-right: solid transparent 10px;
+  border-top: solid #1496bb 10px;
+  bottom: -10px;
+  content: " ";
+  height: 0;
+  left: 50%;
+  margin-left: -13px;
+  position: absolute;
+  width: 0;
+}
+  
+.wrapper:hover .tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  -webkit-transform: translateY(0px);
+     -moz-transform: translateY(0px);
+      -ms-transform: translateY(0px);
+       -o-transform: translateY(0px);
+          transform: translateY(0px);
+}
+
+/* IE can just show/hide with no transition */
+.lte8 .wrapper .tooltip {
+  display: none;
+}
+
+.lte8 .wrapper:hover .tooltip {
+  display: block;
+}
+.wrapper {
+  display: inline;
+  padding: 0;
+  margin: unset !important;
+  font-family: "neucha";
+  background: none;
+  text-transform: unset;
+  color:unset;
+}
+.tooltip {
+  width: fit-content !important;
+}
+
+span.wrapper {
+  left: 5px;
+  right: 5px;
+}
+sup {
+  border-radius: 50%;
+  background: #00ffb2;
+  color: black;
+  padding: 2px 8px;
+  font-size: 13px;
+  font-weight: bold;
+}
+.progress {
+  width: 50%;
+  margin: 0px 0px;
+  display: inline-block;
+  border-radius: 5px;
+  box-shadow: 0 0 3px white;
+  padding: 2px 0;
+  height: 10px;
+  /* background-size:0px 0px; */
+  color: white;
+  margin: 5px auto;
+  position: relative;
+}
+
+.progress.progress-100 {
+  background: linear-gradient(90deg, #a02020 100%, transparent);
+}
+.progress.progress-90 {
+  background: linear-gradient(90deg, #b02274 90%, transparent 93%);
+}
+.progress.progress-80 {
+  background: linear-gradient(90deg, #a02095 80%, transparent 86%);
+}
+.progress.progress-70 {
+  background: linear-gradient(90deg, #5548b4 70%, transparent 80%);
+}
+.progress.progress-60 {
+  background: linear-gradient(90deg, #208fa4 60%, transparent 70%);
+}
+.progress.progress-50 {
+  background: linear-gradient(90deg, #20a061 50%, transparent  60%);
+}
+.progress.progress-40 {
+  background: linear-gradient(90deg, #44c020 40%, transparent 50%);
+}
+.progress.progress-30 {
+  background: linear-gradient(90deg, #83a020 30%, transparent 40%);
+}
+.progress.progress-20 {
+  background: linear-gradient(90deg, #a07d20 20%, transparent 30%);
+}
+.progress.progress-10 {
+  background: linear-gradient(90deg, #a05220 10%, transparent 20%);
+}
+
+.gallery div {width: 30% !important;margin: 5px;height: 150px !important;display: inline-flex;object-fit: cover;position: relative;}
+
+.gallery .gal-img {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative;
+    display: block;
+    cursor: unset !important;
+}
+
+.gallery img,.gallery video {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    border-radius: 5px;
+    cursor: unset !important;
+}
+
+.wrapper .tooltip {
+    height: fit-content !important;
+    left: 50%;
+    transform: translate(-50%, 0%) !important;
+}
+.gallery div:hover {filter: grayscale(0.5);cursor: pointer;}
+.gallery.networks div {
+  width: 23% !important;
+  height: 60px !important;
+}
+
+.gallery.networks img {
+  object-fit: contain;
 }
