@@ -29,7 +29,7 @@ class App extends Component {
     return(
       <div>
         <div class="black-bg">
-          <ScrollContainer snap="">
+          <ScrollContainer >
             <ScrollPage>
             <Animator animation={FadeInZoomIn}>
               <div className="container-wallpaper white-shine" id="page-0">
