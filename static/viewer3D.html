@@ -1,0 +1,50 @@
+<html>
+	<head>
+  		<title>MenuXR</title>
+		  	<meta charset="utf-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+			<script src="Scripts/aframe-master.min.js"></script>
+			<script src="https://unpkg.com/aframe-extras@3.3.0/dist/aframe-extras.min.js"></script>
+			<script src="Scripts/model-viewer.js"></script>
+			<script src="Scripts/background-gradient.js"></script>
+			<script>
+				//var ligaHome = window.location.href.toUpperCase().includes("AURAXR") ? "/menuxr2/" : "/menuxr2/";
+				//ligaHome= window.location.href.toUpperCase().includes("LOCALHOST") ? "/" : ligaHome;
+				const ligaHome = "/";
+				
+				document.addEventListener('DOMContentLoaded', () => {
+					setTimeout(() => {
+						SetDishAndInfo();
+					}, 1000);
+				});
+	
+				function SetDishAndInfo()
+				{	
+					var platotest = document.querySelector('#escena');
+					// var paneltest = document.querySelector('#panelinfo');
+					var currentDish = JSON.parse(localStorage.itemStorage).assets.vectorFile;
+					// var currentInfo = JSON.parse(localStorage.itemStorage).description;
+					console.log("PLATILLO:",currentDish);
+					platotest.setAttribute('model-viewer', 'gltfModel: '+ligaHome+'3DModels/'+ currentDish +'.glb;')
+					// paneltest.setAttribute('src','/Panels/'+ currentInfo +'.png')
+					
+				}
+			</script>
+	</head>
+	<body class="viewer-body">
+		<a-scene id="escena" physicallycorrectlights="true" renderer="precision: high; antialias: false; logarithmicDepthBuffer:true; colorManagement: true;" model-viewer="gltfModel:; title:" vr-mode-ui="enabled: false" loading-screen="dotsColor: #DBDADA; backgroundColor: #282828">
+			<a-assets>	
+					
+			</a-assets>
+		</a-scene>
+	</body>
+
+	<style>
+		body {
+		margin: 0;
+		padding: 0;
+		background:none !important;
+	}
+
+	</style>
+</html>

@@ -1,0 +1,112 @@
+{
+  ".svelte-kit/runtime/client/start.js": {
+    "file": "start-ac53137c.js",
+    "src": ".svelte-kit/runtime/client/start.js",
+    "isEntry": true,
+    "imports": [
+      "_index-449312ed.js",
+      "_index-f8e6abfe.js"
+    ],
+    "dynamicImports": [
+      "src/routes/__layout.svelte",
+      ".svelte-kit/runtime/components/error.svelte",
+      "src/routes/index.svelte",
+      "src/routes/productos/index.svelte"
+    ]
+  },
+  "src/routes/__layout.svelte": {
+    "file": "pages/__layout.svelte-048a8862.js",
+    "src": "src/routes/__layout.svelte",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-449312ed.js",
+      "_Store-70b2f247.js",
+      "_index-f8e6abfe.js"
+    ],
+    "css": [
+      "assets/pages/__layout.svelte-28666437.css"
+    ],
+    "assets": [
+      "assets/restaurant-logo-bc47b579.png",
+      "assets/fira-mono-cyrillic-ext-400-normal-3df7909e.woff2",
+      "assets/fira-mono-all-400-normal-1e3b098c.woff",
+      "assets/fira-mono-cyrillic-400-normal-c7d433fd.woff2",
+      "assets/fira-mono-greek-ext-400-normal-9e2fe623.woff2",
+      "assets/fira-mono-greek-400-normal-a8be01ce.woff2",
+      "assets/fira-mono-latin-ext-400-normal-6bfabd30.woff2",
+      "assets/fira-mono-latin-400-normal-e43b3538.woff2"
+    ]
+  },
+  ".svelte-kit/runtime/components/error.svelte": {
+    "file": "error.svelte-538a79b4.js",
+    "src": ".svelte-kit/runtime/components/error.svelte",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-449312ed.js"
+    ]
+  },
+  "src/routes/index.svelte": {
+    "file": "pages/index.svelte-18e67a4a.js",
+    "src": "src/routes/index.svelte",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-449312ed.js",
+      "_Store-70b2f247.js",
+      "_index-f8e6abfe.js",
+      "_Loader-46d873b9.js"
+    ],
+    "css": [
+      "assets/pages/index.svelte-ddc97a7a.css"
+    ],
+    "assets": [
+      "assets/visor3d-ac94e44b.png",
+      "assets/visorAr-c5241b8e.png"
+    ]
+  },
+  "src/routes/productos/index.svelte": {
+    "file": "pages/productos/index.svelte-d2f43925.js",
+    "src": "src/routes/productos/index.svelte",
+    "isEntry": true,
+    "isDynamicEntry": true,
+    "imports": [
+      "_index-449312ed.js",
+      "_Loader-46d873b9.js",
+      "_Store-70b2f247.js",
+      "_index-f8e6abfe.js"
+    ],
+    "css": [
+      "assets/pages/productos/index.svelte-4f278f28.css"
+    ],
+    "assets": [
+      "assets/organico-2f820b38.png",
+      "assets/superfood-de11f785.png"
+    ]
+  },
+  "_index-449312ed.js": {
+    "file": "chunks/index-449312ed.js"
+  },
+  "_index-f8e6abfe.js": {
+    "file": "chunks/index-f8e6abfe.js",
+    "imports": [
+      "_index-449312ed.js"
+    ]
+  },
+  "_Store-70b2f247.js": {
+    "file": "chunks/Store-70b2f247.js",
+    "imports": [
+      "_index-f8e6abfe.js"
+    ]
+  },
+  "_Loader-46d873b9.js": {
+    "file": "chunks/Loader-46d873b9.js",
+    "imports": [
+      "_index-449312ed.js"
+    ],
+    "css": [
+      "assets/Loader-0b8ef65f.css"
+    ]
+  }
+}
