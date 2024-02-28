@@ -127,7 +127,7 @@ async function redeem_auth_code(response_str) {
   }).catch((error) => {
     console.log(`Error: ${error.message}`)
   })
-
+  console.log(`whut: ${response}`)
   const info = await response.json()
   console.log(`/api/token response: ${JSON.stringify(info)}`)
 
