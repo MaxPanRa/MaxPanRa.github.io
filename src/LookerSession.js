@@ -33,14 +33,14 @@ async function oauth_login() {
   const params = {
     response_type: 'code',
     client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
-    redirect_uri: 'https://maxpanra.github.io',
+    redirect_uri: 'http://localhost:3000',
     scope: 'cors_api',
     state: '1235813',
     code_challenge_method: 'S256',
     code_challenge: code_challenge,
   }
   const url = `${base_url}?${new URLSearchParams(params).toString()}` // Replace base_url with your full Looker instance's UI host URL, plus the `/auth` endpoint.
-  console.log(url)
+  //console.log(url)
 
   // Stash the code verifier we created in sessionStorage, which
   // will survive page loads caused by login redirects
@@ -48,9 +48,14 @@ async function oauth_login() {
   // to redeem the auth_code received for an access_token
   //
   sessionStorage.setItem('code_verifier', code_verifier)
-
-  //document.location = url
-  redeem_auth_code("code=AgEMAAFAI8txJscJVL8ZAC8BxpolqofXzsK2GgT_HrDaqWmgarTQKniE56P9naWgVvubgVq9aDqprDhxZ3hrTgDVE6lONCULS8-q1A1FaNubgSo9pLUXQduenBTJxojwr8-pSXQyTMWORns4uxUwzS1-ZeEWHzZrQuwinO5WFMRg_ZE3KJiMHpy2RjJpwBxAY2iYmxFWj-HOAy4xn1hsRPcMudkVsj8S3NDBA7V5-zIq6AQCAIio0HHIJBlVvA9TO6n7q4VxDFjpztLjNn9FwwgRkT1HJd044foLXroARCQv6l3aOT559hwdAabgdlPx67cdz9VLRSWsUAn4Zr0RUrnEvcYMpYxIXXTpqWuRTZtEcp56PCgbDRVRftjBpX2dWurP5C1DKvY8mXPskLE1ws-ILov0yhxIHi3nbHIEKPgwyqrcGcdbhbNJaWJnqXYfH6Ev227jEKRL4XMRXYbWL6LP3dTTnNkWTfBmBmdVZWf77gN-ovoJl795PulS9m4CpYiYmZcsJg&state=1235813");
+  console.log("CODE VERIFIER ANTES!"+code_verifier);
+  if(!document.location.toString().includes("?code=")){
+    console.log("AUTENTICANDO!");
+    document.location = url
+  }else{
+    console.log("AUTENTICADO:" +document.location);
+    redeem_auth_code(document.location.toString().split("?")[1]);
+  }
 }
 
 function array_to_hex(array) {
@@ -93,7 +98,17 @@ async function redeem_auth_code(response_str) {
     console.log('ERROR: Missing code_verifier in session storage')
     return
   }
-  sessionStorage.removeItem('code_verifier')
+  //sessionStorage.removeItem('code_verifier')
+  //console.log('BORRADO CODE_VERIFIER');
+  console.log('CODE VERIFIER:'+code_verifier);
+  console.log('AUTH CODE:'+auth_code);
+  console.log(JSON.stringify({
+    grant_type: 'authorization_code',
+    client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
+    redirect_uri: 'http://localhost:3000',
+    code: auth_code,
+    code_verifier: code_verifier,
+  }));
   const response = await
   fetch('https://gtechdev.cloud.looker.com/api/token', {  // This is the URL of your Looker instance's API web service
     method: 'POST',
@@ -101,7 +116,7 @@ async function redeem_auth_code(response_str) {
     body: JSON.stringify({
       grant_type: 'authorization_code',
       client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
-      redirect_uri: 'https://maxpanra.github.io',
+      redirect_uri: 'http://localhost:3000',
       code: auth_code,
       code_verifier: code_verifier,
     }),
