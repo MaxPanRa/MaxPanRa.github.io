@@ -33,7 +33,7 @@ async function oauth_login() {
   const params = {
     response_type: 'code',
     client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
-    redirect_uri: 'http://localhost:3000',
+    redirect_uri: 'https://maxpanra.github.io/',
     scope: 'cors_api',
     state: '1235813',
     code_challenge_method: 'S256',
@@ -105,7 +105,7 @@ async function redeem_auth_code(response_str) {
   console.log(JSON.stringify({
     grant_type: 'authorization_code',
     client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
-    redirect_uri: 'http://localhost:3000',
+    redirect_uri: 'https://maxpanra.github.io/',
     code: auth_code,
     code_verifier: code_verifier,
   }));
@@ -116,7 +116,7 @@ async function redeem_auth_code(response_str) {
     body: JSON.stringify({
       grant_type: 'authorization_code',
       client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
-      redirect_uri: 'http://localhost:3000',
+      redirect_uri: 'https://maxpanra.github.io/',
       code: auth_code,
       code_verifier: code_verifier,
     }),
