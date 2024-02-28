@@ -29,10 +29,10 @@ export const login = async ()=>{
 async function oauth_login() {
   const code_verifier = secure_random(32)
   const code_challenge = await sha256_hash(code_verifier)
-  const base_url = "https://gtechdev.cloud.looker.com";
+  const base_url = "https://gtechdev.cloud.looker.com/auth";
   const params = {
     response_type: 'code',
-    client_id: '22',
+    client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
     redirect_uri: 'https://maxpanra.github.io',
     scope: 'cors_api',
     state: '1235813',
@@ -49,7 +49,8 @@ async function oauth_login() {
   //
   sessionStorage.setItem('code_verifier', code_verifier)
 
-  document.location = url
+  //document.location = url
+  redeem_auth_code("code=AgEMAAFAI8txJscJVL8ZAC8BxpolqofXzsK2GgT_HrDaqWmgarTQKniE56P9naWgVvubgVq9aDqprDhxZ3hrTgDVE6lONCULS8-q1A1FaNubgSo9pLUXQduenBTJxojwr8-pSXQyTMWORns4uxUwzS1-ZeEWHzZrQuwinO5WFMRg_ZE3KJiMHpy2RjJpwBxAY2iYmxFWj-HOAy4xn1hsRPcMudkVsj8S3NDBA7V5-zIq6AQCAIio0HHIJBlVvA9TO6n7q4VxDFjpztLjNn9FwwgRkT1HJd044foLXroARCQv6l3aOT559hwdAabgdlPx67cdz9VLRSWsUAn4Zr0RUrnEvcYMpYxIXXTpqWuRTZtEcp56PCgbDRVRftjBpX2dWurP5C1DKvY8mXPskLE1ws-ILov0yhxIHi3nbHIEKPgwyqrcGcdbhbNJaWJnqXYfH6Ev227jEKRL4XMRXYbWL6LP3dTTnNkWTfBmBmdVZWf77gN-ovoJl795PulS9m4CpYiYmZcsJg&state=1235813");
 }
 
 function array_to_hex(array) {
@@ -74,4 +75,54 @@ function base64(str) {
 
 function utf8(str) {
   return decodeURIComponent(escape(window.atob(str)));
+}
+
+async function redeem_auth_code(response_str) {
+  const params = new URLSearchParams(response_str)
+  const auth_code = params.get('code')
+
+  if (!auth_code) {
+    console.log('ERROR: No authorization code in response')
+    return
+  }
+  console.log(`auth code received: ${auth_code}`)
+  console.log(`state: ${params.get('state')}`)
+
+  const code_verifier = sessionStorage.getItem('code_verifier')
+  if (!code_verifier) {
+    console.log('ERROR: Missing code_verifier in session storage')
+    return
+  }
+  sessionStorage.removeItem('code_verifier')
+  const response = await
+  fetch('https://gtechdev.cloud.looker.com/api/token', {  // This is the URL of your Looker instance's API web service
+    method: 'POST',
+    mode: 'cors',    // This line is required so that the browser will attempt a CORS request.
+    body: JSON.stringify({
+      grant_type: 'authorization_code',
+      client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
+      redirect_uri: 'https://maxpanra.github.io',
+      code: auth_code,
+      code_verifier: code_verifier,
+    }),
+    headers: {
+      'x-looker-appid': 'Web App Auth & CORS API Demo', // This header is optional.
+      'Content-Type': 'application/json;charset=UTF-8'  // This header is required.
+    },
+  }).catch((error) => {
+    console.log(`Error: ${error.message}`)
+  })
+
+  const info = await response.json()
+  console.log(`/api/token response: ${JSON.stringify(info)}`)
+
+  // Store the access_token and other info,
+  // which in this example is done in sessionStorage
+
+  const expires_at = new Date(Date.now() + (info.expires_in * 1000))
+  info.expires_at = expires_at
+  console.log(`Access token expires at ${expires_at.toLocaleTimeString()} local time.`)
+  sessionStorage.setItem('access_info', JSON.stringify(info))
+  console.log(sessionStorage.getItem('access_info'));
+  
 }
