@@ -1,3 +1,4 @@
+import { CLIENT_GUID, LOOKER_WEB, REDIRECT_URI } from "./Constants";
 
 class LookerSession {
   
@@ -6,7 +7,7 @@ class LookerSession {
 
 
 export const login = async ()=>{
-  console.log("1");
+  console.log(REDIRECT_URI);
   oauth_login();
   /*  
   const myHeaders = new Headers();
@@ -29,11 +30,11 @@ export const login = async ()=>{
 async function oauth_login() {
   const code_verifier = secure_random(32)
   const code_challenge = await sha256_hash(code_verifier)
-  const base_url = "https://gtechdev.cloud.looker.com/auth";
+  const base_url = LOOKER_WEB+"auth";
   const params = {
     response_type: 'code',
-    client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
-    redirect_uri: 'https://maxpanra.github.io/',
+    client_id: CLIENT_GUID,
+    redirect_uri: REDIRECT_URI,
     scope: 'cors_api',
     state: '1235813',
     code_challenge_method: 'S256',
@@ -104,19 +105,19 @@ async function redeem_auth_code(response_str) {
   console.log('AUTH CODE:'+auth_code);
   console.log(JSON.stringify({
     grant_type: 'authorization_code',
-    client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
-    redirect_uri: 'https://maxpanra.github.io/',
+    client_id: CLIENT_GUID,
+    redirect_uri: REDIRECT_URI,
     code: auth_code,
     code_verifier: code_verifier,
   }));
   const response = await
-  fetch('https://gtechdev.cloud.looker.com/api/token', {  // This is the URL of your Looker instance's API web service
+  fetch(LOOKER_WEB+"api/token", {  // This is the URL of your Looker instance's API web service
     method: 'POST',
     mode: 'cors',    // This line is required so that the browser will attempt a CORS request.
     body: JSON.stringify({
       grant_type: 'authorization_code',
-      client_id: '561326193392-71u84huibkpfu36g6hfmfdlnc5hg781v.apps.googleusercontent.com',
-      redirect_uri: 'https://maxpanra.github.io/',
+      client_id: CLIENT_GUID,
+      redirect_uri: REDIRECT_URI,
       code: auth_code,
       code_verifier: code_verifier,
     }),
@@ -127,7 +128,7 @@ async function redeem_auth_code(response_str) {
   }).catch((error) => {
     console.log(`Error: ${error.message}`)
   })
-  console.log(`whut: ${response}`)
+  console.log(`API/TOKEN RESPONSE: ${response}`)
   const info = await response.json()
   console.log(`/api/token response: ${JSON.stringify(info)}`)
 
