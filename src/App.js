@@ -29,7 +29,7 @@ function App() {
     slices: {
       0: { color: "Green" },
       1: { color: "Lightgray" },
-    },
+    }, 
   };
 
   const testProd={imagen:"/Images/LataCoca.png",nombre:"Coca",cantidad:2};
