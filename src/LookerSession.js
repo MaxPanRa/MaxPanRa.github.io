@@ -31,7 +31,7 @@ async function oauth_login() {
   const code_verifier = secure_random(32)
   const code_challenge = await sha256_hash(code_verifier)
   const base_url = LOOKER_WEB+"auth";
-  const params = {
+  const params = { 
     response_type: 'code',
     client_id: CLIENT_GUID,
     redirect_uri: REDIRECT_URI,
