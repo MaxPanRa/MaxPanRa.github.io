@@ -72,7 +72,12 @@ function secure_random(byte_count) {
 async function sha256_hash(message) {
   const msgUint8 = new TextEncoder().encode(message)
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
-  return base64(hashBuffer);  // Refers to the implementation of base64.encode stored at https://gist.github.com/jhurliman/1250118
+  const base64String = btoa(String.fromCharCode.apply(null, hashBuffer));
+  const base64URLEncoded = base64String
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_')
+  .replace(/=/g, '');
+  return base64URLEncoded;  // Refers to the implementation of base64.encode stored at https://gist.github.com/jhurliman/1250118
 }
 
 function base64(str) {
