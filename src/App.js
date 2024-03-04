@@ -12,7 +12,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="authenticated" element={<Authenticated />} />
+        {/*<Route path="authenticated" element={<Authenticated />} />*/}
         <Route path="*" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>

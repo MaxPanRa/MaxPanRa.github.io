@@ -4,14 +4,6 @@ import React, { useState } from "react";
 
 export async function oauth_login() {
 
-  const code_ver = sessionStorage.getItem('code_verifier');
-  if (code_ver ) {
-    if(TOKEN == ""){
-      sessionStorage.removeItem('code_verifier');
-    }else{
-      return;
-    }
-  }
   const code_verifier = secure_random(32)
   const code_challenge = await sha256_hash(code_verifier)
   const base_url = LOOKER_WEB+"auth";
@@ -25,10 +17,16 @@ export async function oauth_login() {
     code_challenge: code_challenge,
   }
   const url = `${base_url}?${new URLSearchParams(params).toString()}` // Replace base_url with your full Looker instance's UI host URL, plus the `/auth` endpoint.
-  
-  sessionStorage.setItem('code_verifier', code_verifier)
-  console.log("CODE VERIFIER ANTES: "+code_verifier);
-  document.location = url;
+
+  if(!document.location.toString().includes("?code=") && sessionStorage.getItem('code_verifier')){
+    console.log("AUTENTICANDO!");
+    console.log("CODE VERIFIER ANTES: "+code_verifier);
+    sessionStorage.setItem('code_verifier', code_verifier)
+    document.location = url;
+  }else{
+    console.log("AUTENTICADO:" +document.location);
+    redeem_auth_code(document.location.toString().split("?")[1]);
+  }
 }
 
 function array_to_hex(array) {
@@ -48,6 +46,7 @@ async function sha256_hash(message) {
 }
 
 export async function redeem_auth_code(response_str) {
+  sessionStorage.setItem('acs_tkn', "asdasd");
   const params = new URLSearchParams(response_str)
   const auth_code = params.get('code')
 
@@ -63,7 +62,7 @@ export async function redeem_auth_code(response_str) {
     console.log('ERROR: Missing code_verifier in session storage')
     return
   }
-  sessionStorage.removeItem('code_verifier')
+  //sessionStorage.removeItem('code_verifier')
   
   //console.log('CODE VERIFIER:'+code_verifier);
   //console.log('AUTH CODE:'+auth_code);
@@ -95,6 +94,8 @@ export async function redeem_auth_code(response_str) {
   console.log(`API/TOKEN RESPONSE: ${response}`)
   const info = await response.json()
   console.log(`/api/token response: ${JSON.stringify(info)}`)
+
+  alert(response);
 
   // Store the access_token and other info,
   // which in this example is done in sessionStorage
