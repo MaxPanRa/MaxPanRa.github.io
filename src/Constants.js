@@ -4,4 +4,4 @@ export const LOOKER_WEB= "https://gtechdev.cloud.looker.com/";
 export const REDIRECT_URI='https://maxpanra.github.io/'
 //export const REDIRECT_URI='http://localhost:3000';
 
-export let TOKEN="";
+export let TOKEN=""; 
