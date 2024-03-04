@@ -1,33 +1,17 @@
-import { CLIENT_GUID, LOOKER_WEB, REDIRECT_URI } from "./Constants";
+import { CLIENT_GUID, LOOKER_WEB, REDIRECT_URI, TOKEN } from "./Constants";
+import {Base64} from "./Base64";
+import React, { useState } from "react";
 
-class LookerSession {
-  
-    
-} 
+export async function oauth_login() {
 
-
-export const login = async ()=>{
-  console.log(REDIRECT_URI);
-  oauth_login();
-  /*  
-  const myHeaders = new Headers();
-  myHeaders.append("Cookie", "CSRF-TOKEN=lwZylQ8C0gSQX6%2FDi89t2V4jarAkQM1TM%2FCN%2BjRP0KU%3D;");
-
-  const requestOptions = {
-    method: "POST",
-    headers: myHeaders,
-    redirect: "follow"
-  };
-
-  const sessionJSON = await fetch("https://gtechdev.cloud.looker.com/api/4.0/login?client_id=jcxxgpnztjRVjCvjCMkk&client_secret=stSFJD7kvvFdfqBsxpKYNDq7", requestOptions)
-    .then((response) => response.text())
-    .then((result) => console.log(result))
-    .catch((error) => console.error(error));
-  console.log("SJson: "+sessionJSON);
-*/
-}
-
-async function oauth_login() {
+  const code_ver = sessionStorage.getItem('code_verifier');
+  if (code_ver ) {
+    if(TOKEN == ""){
+      sessionStorage.removeItem('code_verifier');
+    }else{
+      return;
+    }
+  }
   const code_verifier = secure_random(32)
   const code_challenge = await sha256_hash(code_verifier)
   const base_url = LOOKER_WEB+"auth";
@@ -41,22 +25,10 @@ async function oauth_login() {
     code_challenge: code_challenge,
   }
   const url = `${base_url}?${new URLSearchParams(params).toString()}` // Replace base_url with your full Looker instance's UI host URL, plus the `/auth` endpoint.
-  //console.log(url)
-
-  // Stash the code verifier we created in sessionStorage, which
-  // will survive page loads caused by login redirects
-  // The code verifier value is needed after the login redirect
-  // to redeem the auth_code received for an access_token
-  //
+  
   sessionStorage.setItem('code_verifier', code_verifier)
-  console.log("CODE VERIFIER ANTES!"+code_verifier);
-  if(!document.location.toString().includes("?code=")){
-    console.log("AUTENTICANDO!");
-    document.location = url
-  }else{
-    console.log("AUTENTICADO:" +document.location);
-    redeem_auth_code(document.location.toString().split("?")[1]);
-  }
+  console.log("CODE VERIFIER ANTES: "+code_verifier);
+  document.location = url;
 }
 
 function array_to_hex(array) {
@@ -72,23 +44,10 @@ function secure_random(byte_count) {
 async function sha256_hash(message) {
   const msgUint8 = new TextEncoder().encode(message)
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8)
-  const base64String = btoa(String.fromCharCode.apply(null, hashBuffer));
-  const base64URLEncoded = base64String
-  .replace(/\+/g, '-')
-  .replace(/\//g, '_')
-  .replace(/=/g, '');
-  return base64URLEncoded;  // Refers to the implementation of base64.encode stored at https://gist.github.com/jhurliman/1250118
+  return Base64.urlEncode(hashBuffer);  // Refers to the implementation of base64.encode stored at https://gist.github.com/jhurliman/1250118
 }
 
-function base64(str) {
-  return window.btoa(unescape(encodeURIComponent(str)));
-}
-
-function utf8(str) {
-  return decodeURIComponent(escape(window.atob(str)));
-}
-
-async function redeem_auth_code(response_str) {
+export async function redeem_auth_code(response_str) {
   const params = new URLSearchParams(response_str)
   const auth_code = params.get('code')
 
@@ -96,18 +55,18 @@ async function redeem_auth_code(response_str) {
     console.log('ERROR: No authorization code in response')
     return
   }
-  console.log(`auth code received: ${auth_code}`)
-  console.log(`state: ${params.get('state')}`)
+  //console.log(`auth code received: ${auth_code}`)
+  //console.log(`state: ${params.get('state')}`)
 
   const code_verifier = sessionStorage.getItem('code_verifier')
   if (!code_verifier) {
     console.log('ERROR: Missing code_verifier in session storage')
     return
   }
-  //sessionStorage.removeItem('code_verifier')
-  //console.log('BORRADO CODE_VERIFIER');
-  console.log('CODE VERIFIER:'+code_verifier);
-  console.log('AUTH CODE:'+auth_code);
+  sessionStorage.removeItem('code_verifier')
+  
+  //console.log('CODE VERIFIER:'+code_verifier);
+  //console.log('AUTH CODE:'+auth_code);
   console.log(JSON.stringify({
     grant_type: 'authorization_code',
     client_id: CLIENT_GUID,

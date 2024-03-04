@@ -4,7 +4,7 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
 const Product = ({ data}) => {
-    console.log(data);
+    //console.log(data);
   return (
     <Container className="prod-block">
         <Row>

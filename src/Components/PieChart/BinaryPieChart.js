@@ -5,7 +5,7 @@ import Col from 'react-bootstrap/Col';
 import { Chart } from "react-google-charts";
 
 const BinaryPieChart = ({ title, data, options }) => {
-    console.log(data[1]);
+    //console.log(data[1]);
     const total = data[1][1]+data[2][1];
     const partial = data[1][1];
   return (
