@@ -18,14 +18,14 @@ export async function oauth_login() {
   }
   const url = `${base_url}?${new URLSearchParams(params).toString()}` // Replace base_url with your full Looker instance's UI host URL, plus the `/auth` endpoint.
 
-  if(!document.location.toString().includes("?code=") && sessionStorage.getItem('code_verifier')){
+  if(!document.location.toString().includes("?code=") && !sessionStorage.getItem('code_verifier')){
     console.log("AUTENTICANDO!");
     console.log("CODE VERIFIER ANTES: "+code_verifier);
-    sessionStorage.setItem('code_verifier', code_verifier)
+    sessionStorage.setItem('code_verifier', code_verifier);
     document.location = url;
   }else{
-    console.log("AUTENTICADO:" +document.location);
-    redeem_auth_code(document.location.toString().split("?")[1]);
+    console.log("AUTENTICADO:" +document.location.search);
+    redeem_auth_code(document.location.search);
   }
 }
 
