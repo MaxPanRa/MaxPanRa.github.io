@@ -85,8 +85,9 @@ class Dashboard extends Component {
     let tokn = sessionStorage.getItem("tkn");
     debugger;
     try {
-      const response = await fetch('https://api.example.com/data');
-      const data = await response.json();
+      const response = await oauth_login();
+      debugger;
+      //const data = await response.json();
       this.setState({ data });
     } catch (error) {
       console.error("There was a problem with the fetch operation:", error);
