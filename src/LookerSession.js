@@ -1,4 +1,4 @@
-import { CLIENT_GUID, LOOKER_WEB, REDIRECT_URI, TOKEN } from "./Constants";
+import { CLIENT_GUID, LOOKER_WEB, REDIRECT_URI, SLUG_QUERY, TOKEN } from "./Constants";
 import {Base64} from "./Base64";
 import React, { useState } from "react";
 
@@ -97,17 +97,58 @@ export async function redeem_auth_code(response_str) {
   const info = await response.json()
   console.log(`/api/token response: ${JSON.stringify(info)}`)
 
-  //alert(response);
-  debugger;
-  // Store the access_token and other info,
-  // which in this example is done in sessionStorage
-
   const expires_at = new Date(Date.now() + (info.expires_in * 1000))
   info.expires_at = expires_at
   console.log(`Access token expires at ${expires_at.toLocaleTimeString()} local time.`)
   sessionStorage.setItem('access_info', JSON.stringify(info))
-  sessionStorage.setItem("tkn",);
   console.log(sessionStorage.getItem('access_info'));
-  return response;
+  return info;
+  
+}
+
+export async function get_slug(tkn) {
+
+  const base_url = LOOKER_WEB+"/sql_queries";
+  const params = {
+    "connection_name": "arca-vm-poc",
+    "sql": SLUG_QUERY,
+    "vis_config": {}
+  }
+  const response = await
+  fetch(base_url, {  // This is the URL of your Looker instance's API web service
+    method: 'POST',
+    mode: 'cors',    // This line is required so that the browser will attempt a CORS request.
+    body: params,
+    headers: {
+      'x-looker-appid': 'Web App Auth & CORS API Demo', // This header is optional.
+      'Content-Type': 'application/json;charset=UTF-8',  // This header is required.
+      'Authorization': 'Bearer '+tkn, // This header is required.
+    },
+  }).catch((error) => {
+    console.log(`Error: ${error.message}`)
+  })
+  
+  const info = await response.json()
+  return info.slug;
+}
+
+export async function get_all_data(slug,tkn) {
+
+  const base_url = LOOKER_WEB+"/sql_queries/"+slug+"/run/json";
+  const response = await
+  fetch(base_url, {  // This is the URL of your Looker instance's API web service
+    method: 'GET',
+    mode: 'cors',
+    headers: {
+      'x-looker-appid': 'Web App Auth & CORS API Demo', // This header is optional.
+      'Content-Type': 'application/json;charset=UTF-8',  // This header is required.
+      'Authorization': 'Bearer '+tkn, // This header is required.
+    },
+  }).catch((error) => {
+    console.log(`Error: ${error.message}`)
+  })
+  
+  const info = await response.json()
+  return info;
   
 }

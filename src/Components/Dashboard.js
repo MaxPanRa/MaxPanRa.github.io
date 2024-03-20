@@ -11,7 +11,7 @@ import Col from 'react-bootstrap/Col';
 import Pagination from 'react-bootstrap/Pagination';
 
 import Product from './Product/Product';
-import { oauth_login } from "../LookerSession";
+import { get_all_data, get_slug, oauth_login } from "../LookerSession";
 import data from './data.json';
 
 import { Button, Carousel, Flex, Image, Input, Space, Tooltip } from 'antd';
@@ -82,12 +82,20 @@ class Dashboard extends Component {
 
   componentDidMount= async ()=>{
     let jsonData = this.state.jsonData; 
-    let tokn = sessionStorage.getItem("tkn");
-    debugger;
+    let tk = "";
+    //debugger;
     try {
       const response = await oauth_login();
-      debugger;
-      //const data = await response.json();
+      //debugger;
+      console.log("TOKEN?"+response);
+      tk = response.access_token;
+      const slug = await get_slug(tk);
+      try{
+        jsonData = await get_all_data(slug,tk);
+      }catch(e){
+        jsonData=this.state.jsonData; 
+      }
+
       this.setState({ data });
     } catch (error) {
       console.error("There was a problem with the fetch operation:", error);
