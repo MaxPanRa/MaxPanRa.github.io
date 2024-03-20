@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/static/css/main.0e0df8db.css",
-    "main.js": "/static/js/main.8e63a6b3.js",
+    "main.js": "/static/js/main.e641ad1b.js",
     "static/media/Vending Machine.png": "/static/media/Vending Machine.4dfe2641fc5f0c834405.png",
     "static/media/vending buttons.png": "/static/media/vending buttons.de3101d01054b4f86089.png",
     "index.html": "/index.html",
     "main.0e0df8db.css.map": "/static/css/main.0e0df8db.css.map",
-    "main.8e63a6b3.js.map": "/static/js/main.8e63a6b3.js.map"
+    "main.e641ad1b.js.map": "/static/js/main.e641ad1b.js.map"
   },
   "entrypoints": [
     "static/css/main.0e0df8db.css",
-    "static/js/main.8e63a6b3.js"
+    "static/js/main.e641ad1b.js"
   ]
 }
