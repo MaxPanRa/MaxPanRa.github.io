@@ -108,7 +108,7 @@ export async function redeem_auth_code(response_str) {
 
 export async function get_slug(tkn) {
 
-  const base_url = LOOKER_WEB+"/sql_queries";
+  const base_url = LOOKER_WEB+"api/4.0/sql_queries";
   const params = {
     "connection_name": "arca-vm-poc",
     "sql": SLUG_QUERY,
@@ -117,7 +117,6 @@ export async function get_slug(tkn) {
   const response = await
   fetch(base_url, {  // This is the URL of your Looker instance's API web service
     method: 'POST',
-    mode: 'cors',    // This line is required so that the browser will attempt a CORS request.
     body: params,
     headers: {
       'x-looker-appid': 'Web App Auth & CORS API Demo', // This header is optional.
@@ -134,11 +133,10 @@ export async function get_slug(tkn) {
 
 export async function get_all_data(slug,tkn) {
 
-  const base_url = LOOKER_WEB+"/sql_queries/"+slug+"/run/json";
+  const base_url = LOOKER_WEB+"api/4.0/sql_queries/"+slug+"/run/json";
   const response = await
   fetch(base_url, {  // This is the URL of your Looker instance's API web service
     method: 'GET',
-    mode: 'cors',
     headers: {
       'x-looker-appid': 'Web App Auth & CORS API Demo', // This header is optional.
       'Content-Type': 'application/json;charset=UTF-8',  // This header is required.
