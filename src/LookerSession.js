@@ -16,6 +16,7 @@ export async function oauth_login() {
     code_challenge_method: 'S256',
     code_challenge: code_challenge,
   }
+  console.log(params);
   const url = `${base_url}?${new URLSearchParams(params).toString()}` // Replace base_url with your full Looker instance's UI host URL, plus the `/auth` endpoint.
 
   if(!document.location.toString().includes("?code=") && !sessionStorage.getItem('code_verifier')){
@@ -23,9 +24,10 @@ export async function oauth_login() {
     console.log("CODE VERIFIER ANTES: "+code_verifier);
     sessionStorage.setItem('code_verifier', code_verifier);
     document.location = url;
+    return null;
   }else{
     console.log("AUTENTICADO:" +document.location.search);
-    redeem_auth_code(document.location.search);
+    return redeem_auth_code(document.location.search);
   }
 }
 
@@ -60,9 +62,9 @@ export async function redeem_auth_code(response_str) {
   const code_verifier = sessionStorage.getItem('code_verifier')
   if (!code_verifier) {
     console.log('ERROR: Missing code_verifier in session storage')
-    return
+    return;
   }
-  //sessionStorage.removeItem('code_verifier')
+  sessionStorage.removeItem('code_verifier')
   
   //console.log('CODE VERIFIER:'+code_verifier);
   //console.log('AUTH CODE:'+auth_code);
@@ -95,8 +97,8 @@ export async function redeem_auth_code(response_str) {
   const info = await response.json()
   console.log(`/api/token response: ${JSON.stringify(info)}`)
 
-  alert(response);
-
+  //alert(response);
+  debugger;
   // Store the access_token and other info,
   // which in this example is done in sessionStorage
 
@@ -104,6 +106,8 @@ export async function redeem_auth_code(response_str) {
   info.expires_at = expires_at
   console.log(`Access token expires at ${expires_at.toLocaleTimeString()} local time.`)
   sessionStorage.setItem('access_info', JSON.stringify(info))
+  sessionStorage.setItem("tkn",);
   console.log(sessionStorage.getItem('access_info'));
+  return response;
   
 }

@@ -11,3 +11,179 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+.vending-row-btns {
+  height: 100%;
+}
+
+.vm-btns-sqr.vm-btns {
+  height: 10%;
+  display: block;
+  position: relative;
+  width: 75%;
+  background: #343a40;
+  margin: 20% auto;
+  border: 10px solid black;
+  box-shadow: 0 0 3px 0 black inset;
+  border-style: inset;
+  border-radius: 20px;
+}
+
+.vm-btns-sqr-long.vm-btns {
+  height: 80%;
+  border: 0px solid #181818;
+  width: 80%;
+  margin: 0 auto;
+  padding: 15px;
+  border-radius: 10px;
+  background: #22455f;
+}
+
+.vm-btns-sqr-1.vm-btns {
+  background: white;
+  border: 1px solid gray;
+  height: 40px;
+  margin: 0 auto;
+  border-radius: 10px;
+  padding: 5px 10px;
+  box-shadow: 0 0 3px 0 black inset;
+  border-style: inset;
+}
+
+.vm-btns-sqr-2.vm-btns {
+  height: 8px;
+  background: #d6dbe7;
+  border: 4px solid #081d2d;
+  border-radius: 5px 5px 0px 0px;
+  border-style: inset;
+}
+
+.vm-btns-sqr-3.vm-btns {
+  height: 12px;
+  background: #d6dbe7;
+  border: 5px solid #081d2d;
+  border-radius: 0px 0px 10px 10px;
+  border-style: inset;
+}
+
+.vm-btns-sqr-4.vm-btns {
+  height: 5px;
+  background: #d6dbe7;
+  border: 3px solid black;
+  border-radius: 3px;
+  margin-top: 2px;
+}
+
+.vm-btns-double-1.vm-btns {
+  width: 100%;
+  height: 15px;
+  display: flex;
+  flex-wrap: nowrap;
+  margin: 8px 0;
+}
+
+.vm-btns-sqr-dbl-1.vm-btns {
+  background: white;
+  height: 100%;
+  width: 90%;
+  display: block;
+  position: relative;
+  box-shadow: 0 0 3px 0 black inset;
+}
+
+.vm-btns-sqr-dbl-1.vm-btns {}
+
+.vm-btns-sqr-dbl-2.vm-btns {
+  background: white;
+  height: 100%;
+  width: 100%;
+  display: block;
+  position: relative;
+  margin-left: 10px;
+  box-shadow: 0 0 3px 0 black inset;
+}
+
+.vm-btns-sqr-5.vm-btns {
+  width: 100%;
+  height: 15px;
+  background: white;
+  box-shadow: 0 0 3px 0 black inset;
+}
+
+.vm-btns-sqr-6.vm-btns {
+  background: white;
+  height: 30px;
+  margin-top: 5px;
+  border-radius: 5px;
+  box-shadow: 0 0 3px 0 black inset;
+  padding-bottom: 15px;
+}
+
+.vm-btns-sqr-7.vm-btns {
+  border: 4px solid gray;
+  width: 80%;
+  margin: 0px auto;
+  height: 20px;
+  top: 3px;
+  position: relative;
+  background: #343a40;
+  border-radius: 5px;
+  box-shadow: 0 0 8px 0 black inset;
+  border-style: inset;
+}
+
+@media (max-width:1000px){
+.vending-row-btns.row {
+  display:none;
+}
+}
+
+.vm-btns-sqr-9.vm-btns {
+  border: 4px solid gray;
+  border-style: inset;
+  width: 75%;
+  margin: 0px auto;
+  height: 80%;
+  top: 0px;
+  position: relative;
+  background: #ffffff;
+  border-radius: 5px;
+  box-shadow: 0 0 5px 3px #00000059 inset;
+}
+
+.vm-btns-sqr-10 {
+  margin-top: 30px;
+  background: #081d2d;
+  height: 50px;
+  border-radius: 10px;
+  box-shadow: 0 0 3px 0 black inset;
+}
+
+.vm-btns-sqr-10 {
+  padding: 12px 10px;
+}
+
+.vm-btns-sqr-11 {
+  height: 100%;
+  width: 100%;
+  background: #081d2d;
+  border: 4px solid white;
+  border-radius: 5px;
+  border-style: inset;
+  box-shadow: 0 0 4px 2px #494949 inset;
+}
+
+.vm-btns-sqr-12 {
+  position: relative;
+  bottom: 5px;
+  width: 100%;
+  height: 15px;
+  background: #081d2d;
+  margin-top: 50px;
+  box-shadow: 0 0 3px 0 black;
+  border-radius: 15px;
+}
+
+.vm-btns {
+  transition: 0.5s;
+}
