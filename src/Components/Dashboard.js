@@ -8,14 +8,13 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import Pagination from 'react-bootstrap/Pagination';
 
 import Product from './Product/Product';
 import { get_all_data, get_slug, oauth_login } from "../LookerSession";
 import data from './data.json';
 
-import { Button, Carousel, Flex, Image, Input, Space, Tooltip } from 'antd';
-import { ArrowLeftOutlined, CaretRightOutlined, CheckCircleOutlined, ClearOutlined, LeftCircleOutlined, LeftSquareOutlined, ReloadOutlined, RightCircleOutlined, RightSquareOutlined, SearchOutlined, SettingFilled, StopOutlined } from "@ant-design/icons";
+import { Button, Carousel, Image, Input, Space, Tooltip } from 'antd';
+import { CheckCircleOutlined, ClearOutlined, CompassOutlined, EyeOutlined, ReloadOutlined, SearchOutlined, StarOutlined, StopOutlined } from "@ant-design/icons";
 import { ALLFILTERS } from "../Constants";
 
 const PieChartOPTIONS = {
@@ -28,8 +27,6 @@ const PieChartOPTIONS = {
   },
   chartArea: {
     left: 0,
-    height: "70%",
-    width: "100%"
   },
 
 }
@@ -39,7 +36,7 @@ class Dashboard extends Component {
     super(props);
     this.state ={
          jsonData:{},
-         productsData: null,
+         productsData: [],
          allProductsData:null,
          hoverObject:{},
          vendingProdsByCell:6,
@@ -51,19 +48,20 @@ class Dashboard extends Component {
          typeProduct:ALLFILTERS,
          generalCharts:[],
          productCharts:[],
+         filteredData:[],
          selectedProduct:{},
          vendingEmpty:[],
          productsInVending:[],
          upgradedView:false,
-         
+         suggestionView:false,
      }
   }
 
   componentWillMount=()=>{
-    const jsonData = [];
+    const jsonData = data;
     this.setState({jsonData})
     const {vendingCols,vendingRows} = this.state;
-    console.log(this.empty2dArray(vendingRows,vendingCols));
+    //console.log(this.empty2dArray(vendingRows,vendingCols));
     this.setState({vendingEmpty:this.empty2dArray(vendingRows,vendingCols)});
     this.setState({productsInVending:this.empty2dArray(vendingRows,vendingCols)});
   }
@@ -81,13 +79,13 @@ class Dashboard extends Component {
   }
 
   componentDidMount= async ()=>{
-    let jsonData = []
+    let jsonData = this.state.jsonData;
     let tk = "";
     //debugger;
-    try {
+    /*try {
       const response = await oauth_login();
       //debugger;
-      console.log("TOKEN?"+response);
+      //console.log("TOKEN?"+response);
       tk = response.access_token;
       const slug = await get_slug(tk);
       try{
@@ -100,30 +98,34 @@ class Dashboard extends Component {
       this.setState({ data });
     } catch (error) {
       console.error("There was a problem with the fetch operation:", error);
-    }
+    }*/
+
     this.setState({jsonData},()=>{
-      this.setState({productsData:jsonData, allProductsData:jsonData, queryProducts:this.getProducts(jsonData,12)});
+      this.setState({productsData:jsonData},()=>{
+        this.getProducts();
+      });
       let productsVend=[];
+      
       if(sessionStorage.getItem("savedVending")){
-        try{
-          this.setState({productsInVending:JSON.parse(sessionStorage.getItem("savedVending"))});
-          productsVend=JSON.parse(sessionStorage.getItem("savedVending"));
-        }catch(error){
-          sessionStorage.clear("savedVending")
-        }
+        productsVend = JSON.parse(sessionStorage.getItem("savedVending"));
+      }else{
+        productsVend = this.empty2dArray(this.state.vendingRows,this.state.vendingCols);
+        sessionStorage.setItem("savedVending",JSON.stringify(productsVend));
       }
+
+      this.setState({productsInVending:productsVend});
       this.calculateGeneralCharts(productsVend);
     })
   }
 
   render() {
-    const {productsData,vendingRows,vendingCols,query, searchArca, typeProduct, hoverObject,productCharts,generalCharts, productsInVending, queryProducts, upgradedView} = this.state;
+    const {vendingRows,vendingCols,query, searchArca, typeProduct, hoverObject,productCharts, generalCharts, productsInVending, suggestionView, queryProducts, upgradedView, productsData, filteredData} = this.state;
     //oauth_login();
     
     const vendR= this.createArray(vendingRows);
     const vendC= this.createArray(vendingCols);
     let windowSize= window.innerHeight;
-    if(productCharts==[])
+    if(productCharts==[] || productsData==[])
     return "";
     return (
       <>
@@ -139,18 +141,19 @@ class Dashboard extends Component {
                       <Row key={j} className="vending-line" style={{"minHeight":"50px","height":""+100/vendR.length+"%"}}>
                         {vendC.map((col,k)=>{
                           let upgClass= upgradedView ? productsInVending[j][k].vm_forecast_dash_obs_cliente+"-upg ":"";
-                          return (<Col onClick={()=>{this.moveProductVending(j,k)}} key={k} className={Object.keys(productsInVending[j][k]).length > 0 ? upgClass+"vending-prod filled-vend":upgClass+"vending-prod"} 
-                            style={{"maxWidth":"80px","maxHeight":"100px","width":""+100/vendC.length+"%"}}>{
-                              Object.keys(productsInVending[j][k]).length > 0? 
-                                <Tooltip title={""+productsInVending[j][k].vm_forecast_dash_producto} className={"btn-vend"}>
-                                  <Image preview={false} src={this.checkImageRegex(productsInVending[j][k].vm_forecast_dash_type)}/>
-                                  {productsInVending[j][k].vm_forecast_dash_arca=="true"?<img src={"/Images/ARCAIcon.png"} alt={data.vm_forecast_dash_producto} className="arca-Icon-vend"/>:""}
-                                  <span className="btn-vend-txt">{productsInVending[j][k].vm_forecast_dash_producto}</span>
-                                </Tooltip>:
-                                  <Tooltip title="Vacío" className="btn-vend-empty">
-                                    <div style={{height:"100%",width:"100%"}}> </div>
-                                  </Tooltip>
-                              }
+                          return (
+                            <Col onClick={()=>{this.moveProductVending(j,k)}} key={k} className={Object.keys(productsInVending[j][k]).length > 0 ? upgClass+"vending-prod filled-vend":upgClass+"vending-prod"} 
+                              style={{"maxWidth":"80px","maxHeight":"100px","width":""+100/vendC.length+"%"}}>{
+                                Object.keys(productsInVending[j][k]).length > 0? 
+                                  <Tooltip title={""+productsInVending[j][k].vm_forecast_dash_producto} className={"btn-vend"}>
+                                    <Image preview={false} src={this.checkImageRegex(productsInVending[j][k].vm_forecast_dash_type)}/>
+                                    {productsInVending[j][k].vm_forecast_dash_arca=="true"?<img src={"/Images/ARCAIcon.png"} alt={data.vm_forecast_dash_producto} className="arca-Icon-vend"/>:""}
+                                    <span className="btn-vend-txt">{productsInVending[j][k].vm_forecast_dash_producto}</span>
+                                  </Tooltip>:
+                                    <Tooltip title="Vacío" className="btn-vend-empty">
+                                      <div style={{height:"100%",width:"100%"}}> </div>
+                                    </Tooltip>
+                                }
                             </Col>
                           )}
                         )} 
@@ -196,18 +199,26 @@ class Dashboard extends Component {
               <Col sm={3} id="vending-charts">
                 <Row className="vending-row">
                   <Row className="vending-actions">
-                    {upgradedView?
-                    <Tooltip title="Salir de vista Mejorada" className="tool-vend">
-                      <Button type="dashed" shape="circle" icon={<StopOutlined />} onClick={()=>{this.removeUpgrade()}} />
-                    </Tooltip> 
-                    :
-                    <Tooltip title="Mostrar Mejora" className="tool-vend">
-                      <Button type="dashed" shape="circle" icon={<CheckCircleOutlined />} onClick={()=>{this.upgradeAll()}} />
+                    <Tooltip title="Alternar Vista" className="tool-vend" >
+                      <Button type={upgradedView?"dashed":"primary"} shape="round" icon={<EyeOutlined />} onClick={()=>{this.alternateVista()}} style={{}}/>
                     </Tooltip>
+                      {suggestionView?
+                      <Tooltip title="Salir de Sugerencia Mejorada" className="tool-vend">
+                        <Button type="dashed" shape="round" icon={<StopOutlined />} onClick={()=>{this.removeUpgrade()}} />
+                      </Tooltip> 
+                      :
+                      <Tooltip title="Mostrar Sugerencia Mejorada" className="tool-vend">
+                        <Button type="primary" shape="round" icon={<CheckCircleOutlined />} onClick={()=>{this.upgradeAll()}} />
+                      </Tooltip>
                     }
+                    {this.vendingHasProducts()?
                     <Tooltip title="Vaciar Máquina" className="tool-vend" >
-                      <Button type="primary" shape="circle" icon={<ClearOutlined />} onClick={()=>{this.cleanVending()}} style={this.vendingHasProducts()?{opacity:1}:{opacity:0,pointerEvents:"none"}}/>
-                    </Tooltip> 
+                      <Button type="dashed" shape="round" icon={<ClearOutlined />} onClick={()=>{this.cleanVending()}} style={this.vendingHasProducts()?{opacity:1}:{opacity:0,pointerEvents:"none"}}/>
+                    </Tooltip> :""}
+                    {suggestionView && JSON.stringify(productsInVending)!=sessionStorage.getItem("savedVending") ?
+                    <Tooltip title="Mantener Mejora" className="tool-vend" >
+                      <Button type="primary" shape="circle" icon={<StarOutlined />} onClick={()=>{this.maintainVending()}} style={{}}/>
+                    </Tooltip> :""}
                   </Row>
                 {generalCharts.length==0 ?"":
                   generalCharts.map((data,k)=>
@@ -215,7 +226,9 @@ class Dashboard extends Component {
                     <BinaryPieChart title={data.title} data={data.axis} options={PieChartOPTIONS} size={data.size+"px"}/>
                   </Col>
                   )}
-                  
+                  <Tooltip title="Ver Recomendaciones" className="tool-vend recommTool" >
+                    <Button type="primary" shape="round" icon={<CompassOutlined />} onClick={()=>{this.showRecomendations()}} style={{}}/>
+                  </Tooltip>
                 </Row>
               </Col>
             </Row>
@@ -239,7 +252,7 @@ class Dashboard extends Component {
                     <Row className="gray-box">
                       <h1>SOCVI</h1>
                       {queryProducts.length == 0 ? "":
-                      <Carousel touchMove arrows afterChange={this.onChange} dots={true} dotWidth={20} prevArrow={<LeftSquareOutlined />} nextArrow={<RightSquareOutlined />} >
+                      <Carousel touchMove={true} arrows afterChange={this.onChange} dots={true} dotWidth={20} /*prevArrow={<LeftSquareOutlined />} nextArrow={<RightSquareOutlined />}*/ >
                         {queryProducts.map((x)=>x)}
                         </Carousel>
                       }
@@ -252,16 +265,15 @@ class Dashboard extends Component {
                   <Row className="blue-box">
                     <Col sm={12} md={10} id="search-bar" >
                       <Row className="search-section-in">
-                        <Input placeholder="input search text" className="search-inp" value={query} onChange={(val)=>{this.setState({query:val.currentTarget.value})}} />
-                        <Button type="primary" className="search-btn" style={{padding:"0px 10px"}} onClick={()=>this.search()}><SearchOutlined style={{ fontSize: '18px'}} /></Button>
+                        <Input placeholder="Texto a Buscar" className="search-inp" value={query} onChange={(val)=>{this.setState({query:val.currentTarget.value})}} />
                       </Row>
                     </Col>
                     <Col sm={12} md={22} id="carousel-sett">
                       <Row className="multi-button">
                         <div className="subtitle-card"><h2>Marca</h2></div>
                         <Space/>
-                        <Button type={!searchArca?"primary":"default"} className="dual-btn" style={{padding:"0px 10px"}} onClick={()=>{this.setState({searchArca:false})}}>Todos</Button>
-                        <Button type={searchArca?"primary":"default"} className="dual-btn" style={{padding:"0px 10px"}} onClick={()=>{this.setState({searchArca:true})}}>Arca</Button>
+                        <Col><Button type={!searchArca?"primary":"default"} className="dual-btn" style={{padding:"0px 10px"}} onClick={()=>{this.setState({searchArca:false})}}>Todos</Button></Col>
+                        <Col><Button type={searchArca?"primary":"default"} className="dual-btn" style={{padding:"0px 10px"}} onClick={()=>{this.setState({searchArca:true})}}>Arca</Button></Col>
                       </Row>
                       <Row className="filter-buttons">
                         <div className="subtitle-card"><h2>Tipo de Producto</h2></div>
@@ -271,6 +283,11 @@ class Dashboard extends Component {
                         <Button type={typeProduct.find((x)=>x=="botana")? "primary":"default"} onClick={()=>{this.addRemoveFilter("botana")}} className="select-btn" style={{padding:"0px 10px"}}>Botana</Button>
                         <Button type={typeProduct.find((x)=>x=="panaderia")? "primary":"default"} onClick={()=>{this.addRemoveFilter("panaderia")}} className="select-btn" style={{padding:"0px 10px"}}>Panadería</Button>
                         <Button type={typeProduct.find((x)=>x=="dulceria")? "primary":"default"} onClick={()=>{this.addRemoveFilter("dulceria")}} className="select-btn" style={{padding:"0px 10px"}}>Dulcería</Button>
+                        
+                      </Row>
+                      <Row className="dualButtons">
+                      <Col><Tooltip title="Buscar"><Button type="primary" className="search-btn" style={{padding:"0px 10px"}} onClick={()=>this.search()}><SearchOutlined style={{ fontSize: '23px'}} /></Button></Tooltip></Col>
+                      {productsData.length!=filteredData.length?<Col><Tooltip title="Reiniciar"><Button type="dashed" className="search-btn" style={{padding:"0px 10px"}} onClick={()=>this.resetSearch()}><ReloadOutlined style={{ fontSize: '23px'}} /></Button></Tooltip></Col>:""}
                       </Row>
                     </Col>
                   </Row>
@@ -298,16 +315,28 @@ class Dashboard extends Component {
     return hasProducts;
   }
 
-  refreshCarousel=()=>{
-    const {productsData}=this.state;
-    this.getProducts(productsData,12);
+  alternateVista=()=>{
+    this.setState({upgradedView:!this.state.upgradedView},()=>{
+      this.refreshCarousel();
+    })
   }
+
+  refreshCarousel=()=>{
+    this.getProducts();
+  }
+
   cleanVending = () =>{
     const {vendingCols,vendingRows} = this.state;
     const d2 =this.empty2dArray(vendingRows,vendingCols);
     this.setState({productsInVending:d2});
     this.setState({generalCharts:[]});
     sessionStorage.clear("savedVending");
+  }
+
+  maintainVending = () =>{
+    const {productsInVending} = this.state;
+    sessionStorage.setItem("savedVending",JSON.stringify(productsInVending));
+    this.removeUpgrade();
   }
 
   hoverObjectChange = (hoverObject) =>{
@@ -356,8 +385,12 @@ class Dashboard extends Component {
       //console.log("EDO ACTUAL:"+newfilter);
       return;
     }
-    if(filter.find((x)=>x==word) !=null){
-      newfilter= filter.map((x)=>x!=word);
+    if(filter.find((x)=>x==word)!=null){
+      filter.map((x)=>{
+        if(x!=word){
+          newfilter.push(x);
+        }
+      });
     }else{
       newfilter = filter;
       newfilter.push(word);
@@ -464,8 +497,13 @@ calculateIndividualCharts=(product)=>{
 }
 
   search = () => {
-    const query = this.state.query;
-    alert(query);
+    this.getProducts();
+  }
+
+  resetSearch = () => {
+    this.setState({filteredData:this.state.productsData,query:"",typeProduct:ALLFILTERS,searchArca:false},()=>{
+      this.getProducts();
+    });
   }
 
   onChange = (currentSlide) => {
@@ -481,31 +519,55 @@ calculateIndividualCharts=(product)=>{
     return Array.from({ length: size }, () => {cont++; return cont});
   }
 
-  getProducts(data,itemsPerRow) {
-    const len= data.length;
+  getProducts() {
+    const {upgradedView,searchArca, typeProduct, query, productsData} = this.state;
+    const itemsPerRow=12;
+
+    let filteredData = [];
+
+    //console.log(typeProduct);
+    productsData.map((x)=>{
+      var applies = false;
+      var typi = "";
+      for (var i = 0; i < typeProduct.length; i++) {
+        if (x.vm_forecast_dash_type.toUpperCase().includes(typeProduct[i].toUpperCase()) || x.vm_forecast_dash_type=="") {
+          applies = true;
+          typi = typeProduct[i];
+          break;
+        }
+      }
+      if(query != "" && !x.vm_forecast_dash_producto.toUpperCase().includes(query.toUpperCase())){
+        applies=false;
+      }
+      if(applies && ((x.vm_forecast_dash_arca=="true" && searchArca) || !searchArca )){
+        filteredData.push(x);
+        //console.log(x.vm_forecast_dash_producto,"vs",query," --- tipo:",x.vm_forecast_dash_type,"vs",typi," --- arca:",x.vm_forecast_dash_arca);
+      }
+    })
+    const len= filteredData.length;
     const pages= Math.ceil(len/itemsPerRow);
     
     let pagesArray = Array.from({ length: pages }, () => "0");
     let insides=[];
     let cont = 0;
+    
+    //console.log("Productos:",filteredData.length," --- Paginas:",pages)
 
     pagesArray.map((page,k)=>{
       insides.push( <Row className="carouselPage" key={k}>
-        {data.map((product, k2) => {
+        {filteredData.map((product, k2) => {
           if(k2<cont || k2>cont+(itemsPerRow-1)) return;
           
           return(
           <Col key={k2} xs="12" sm="6" md="4" lg="3" xl="2">
-            <Product data={product} isUpgradedView={this.state.upgradedView} hoverObj={this.hoverObjectChange} clickObj={this.clickObjectChange} isSelected={product==this.state.selectedProduct}/>
+            <Product data={product} isUpgradedView={upgradedView} hoverObj={this.hoverObjectChange} clickObj={this.clickObjectChange} isSelected={product==this.state.selectedProduct}/>
           </Col>
           )
         })
       }</Row>)
       cont+=5;
     }) 
-    this.setState({queryProducts:[]}, () => {
-      this.setState({queryProducts:insides})
-      });
+    this.setState({filteredData,queryProducts:insides, search:false});
     return insides;
   }
 
@@ -535,10 +597,10 @@ calculateIndividualCharts=(product)=>{
     cleanedData.map((data,i)=>{
       let added = false;
       productsInVending.map((y,j)=> {
-        console.log("row:"+y);
+        //console.log("row:"+y);
         if(added) return;
         y.map((x,k)=> {
-          console.log("col:"+x);
+          //console.log("col:"+x);
           if(added)return;
           if(Object.keys(x).length==0){
             added=true;
@@ -549,7 +611,7 @@ calculateIndividualCharts=(product)=>{
     });
     this.setState({
       productsInVending,
-      upgradedView:true
+      suggestionView:true
     }, () => {
       this.refreshCarousel();
     });
@@ -557,22 +619,22 @@ calculateIndividualCharts=(product)=>{
     this.calculateGeneralCharts(productsInVending);
   }
   removeUpgrade = () =>{
+
     const {productsData,vendingCols,vendingRows} = this.state;
     let prod = [];
     if(sessionStorage.getItem("savedVending")){
-      try{
-        prod = JSON.parse(sessionStorage.getItem("savedVending"));
-      }catch(error){
-        prod = this.empty2dArray(vendingRows,vendingCols);
-      }
+      prod = JSON.parse(sessionStorage.getItem("savedVending"));
+    }else{
+      prod = this.empty2dArray(vendingRows,vendingCols);
+      sessionStorage.setItem("savedVending",JSON.stringify(prod));
     }
+    
     this.setState({
       productsInVending:prod,
-      upgradedView:false,
+      suggestionView:false,
     }, () => {
       this.refreshCarousel();
   });
-
     this.calculateGeneralCharts(prod);
   }
 

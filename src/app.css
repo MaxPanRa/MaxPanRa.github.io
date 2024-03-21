@@ -564,20 +564,6 @@ div#carousel-box {
   box-shadow:0 0 3px #CDD4E4 !important;
 }
 
-.prod-block:hover {
-  transition: .2s;
-    /* box-shadow: 0 0 6px 2px #d0413e inset !important; */
-    cursor: pointer;
-    background: #f6ff9b;
-    border-radius: 7px;
-}
-
-.prod-block.selected {
-  box-shadow: 0 0 2px 5px #d0413e inset !important;
-  background: #f2b8b7;
-  border-radius: 2px;
-}
-
 .slick-arrow {
   background: white !important;
 }
@@ -768,4 +754,48 @@ img.arca-Icon {
 .btn-vend img.arca-Icon-vend {
   position: absolute;
   height: 15px;
+}
+
+.search-btn {
+  margin-top: 20px !important;
+  width: 100% !important;
+}
+
+.search-inp {
+  width: 100% !important;
+}
+
+.prod-block:hover {
+  transition: .2s;
+    /* box-shadow: 0 0 6px 2px #d0413e inset !important; */
+    cursor: pointer;
+    background: #f6ff9b;
+    border-radius: 7px;
+}
+
+.prod-block.selected {
+  box-shadow: 0 0 2px 5px #d0413e inset !important;
+  background: #f2b8b7 !important;
+  border-radius: 2px;
+}
+.recommTool {
+  width: 50% !important;
+  margin:0px auto;
+  border:2px solid white;
+}
+.recommTool svg {
+  font-size:20px;
+}
+
+.vending-row.row {
+  align-content: space-between;
+}
+span.pie-chart-desc {
+  word-wrap: break-word;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dual-btn {
+  width: 100%;
 }

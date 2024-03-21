@@ -54,6 +54,7 @@ class Product extends Component {
         }
         if (this.props.data !== prevProps.data) {
             this.setState({ data: this.props.data });
+            this.checkImageRegex(this.props.data.vm_forecast_dash_type);
         }
     }
 
