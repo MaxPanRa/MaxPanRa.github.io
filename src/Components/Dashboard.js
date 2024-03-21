@@ -60,7 +60,7 @@ class Dashboard extends Component {
   }
 
   componentWillMount=()=>{
-    const jsonData = data
+    const jsonData = [];
     this.setState({jsonData})
     const {vendingCols,vendingRows} = this.state;
     console.log(this.empty2dArray(vendingRows,vendingCols));
@@ -81,7 +81,7 @@ class Dashboard extends Component {
   }
 
   componentDidMount= async ()=>{
-    let jsonData = this.state.jsonData; 
+    let jsonData = []
     let tk = "";
     //debugger;
     try {
@@ -92,6 +92,7 @@ class Dashboard extends Component {
       const slug = await get_slug(tk);
       try{
         jsonData = await get_all_data(slug,tk);
+        window.history.replaceState(null, '', window.location.pathname);
       }catch(e){
         jsonData=this.state.jsonData; 
       }
@@ -100,17 +101,19 @@ class Dashboard extends Component {
     } catch (error) {
       console.error("There was a problem with the fetch operation:", error);
     }
-    this.setState({productsData:jsonData, allProductsData:jsonData, queryProducts:this.getProducts(jsonData,12)});
-    let productsVend=[];
-    if(sessionStorage.getItem("savedVending")){
-      try{
-        this.setState({productsInVending:JSON.parse(sessionStorage.getItem("savedVending"))});
-        productsVend=JSON.parse(sessionStorage.getItem("savedVending"));
-      }catch(error){
-        sessionStorage.clear("savedVending")
+    this.setState({jsonData},()=>{
+      this.setState({productsData:jsonData, allProductsData:jsonData, queryProducts:this.getProducts(jsonData,12)});
+      let productsVend=[];
+      if(sessionStorage.getItem("savedVending")){
+        try{
+          this.setState({productsInVending:JSON.parse(sessionStorage.getItem("savedVending"))});
+          productsVend=JSON.parse(sessionStorage.getItem("savedVending"));
+        }catch(error){
+          sessionStorage.clear("savedVending")
+        }
       }
-    }
-    this.calculateGeneralCharts(productsVend);
+      this.calculateGeneralCharts(productsVend);
+    })
   }
 
   render() {
@@ -120,7 +123,8 @@ class Dashboard extends Component {
     const vendR= this.createArray(vendingRows);
     const vendC= this.createArray(vendingCols);
     let windowSize= window.innerHeight;
-
+    if(productCharts==[])
+    return "";
     return (
       <>
         <Container id="wrapper-background" style={{height:windowSize+"px"}} onMouseMove={()=>{windowSize=window.innerHeight}}>

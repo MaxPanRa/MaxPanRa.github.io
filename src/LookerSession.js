@@ -3,7 +3,6 @@ import {Base64} from "./Base64";
 import React, { useState } from "react";
 
 export async function oauth_login() {
-
   const code_verifier = secure_random(32)
   const code_challenge = await sha256_hash(code_verifier)
   const base_url = LOOKER_WEB+"auth";
@@ -118,7 +117,7 @@ export async function get_slug(tkn) {
   fetch(base_url, {  // This is the URL of your Looker instance's API web service
     method: 'POST',
     mode: 'cors',    // This line is required so that the browser will attempt a CORS request.
-    body: params,
+    body: JSON.stringify(params),
     headers: {
       'Content-Type': 'application/json;charset=UTF-8',  // This header is required.
       'Authorization': 'Bearer '+tkn, // This header is required.
