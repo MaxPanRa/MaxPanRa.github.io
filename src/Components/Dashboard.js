@@ -80,7 +80,6 @@ class Dashboard extends Component {
       const response = await oauth_login();
       let tk = response.access_token;
       this.setState({tkn:tk,lastTkn:Date.now()});
-      window.history.replaceState(null, '', window.location.pathname);
       return tk;
     }else{
       return tkn;
@@ -144,6 +143,7 @@ class Dashboard extends Component {
     })
     */
     //this.setState({jsonData});
+    window.history.replaceState(null, '', window.location.pathname);
   }
 
   render() {
