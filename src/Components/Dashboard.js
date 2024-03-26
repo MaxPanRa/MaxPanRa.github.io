@@ -81,12 +81,13 @@ class Dashboard extends Component {
       /*if(response?.access_token == undefined && tkn!="" && tkn!=undefined){
         return tkn;
       }*/
-      if(response.access_token == undefined){
-        console.log("ITS UNDEFINED!!!");
-        tk = "";
+      let tk = "";
+      if(response.access_token){
+        tk = response.access_token;
+        this.setState({tkn:tk,lastTkn:Date.now()});
+      }else{
+        window.location.reload();
       }
-      let tk = response.access_token;
-      this.setState({tkn:tk,lastTkn:Date.now()});
       
       return tk;
     }else{
