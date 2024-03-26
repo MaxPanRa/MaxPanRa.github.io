@@ -18,6 +18,7 @@ class Recommendations extends Component {
            dataAfter: [],
            show: false, 
            recommended:[],
+           tkn:"",
        };
     }
 
@@ -26,7 +27,8 @@ class Recommendations extends Component {
             allData:this.props.allData,
             dataBefore:this.props.dataBefore,
             dataAfter:this.props.dataAfter,
-            show: this.props.show
+            show: this.props.show,
+            tkn:this.props.tkn
         },()=>{
             this.searchRecommendations(this.state.dataBefore);
         })
@@ -45,6 +47,9 @@ class Recommendations extends Component {
         if (this.props.show !== prevProps.show) {
             this.setState({ show: this.props.show });
         }  
+        if (this.props.tkn !== prevProps.tkn) {
+            this.setState({ tkn: this.props.tkn });
+        }
     }
 
     render(){
@@ -82,62 +87,35 @@ class Recommendations extends Component {
         const {allData} = this.state;
         
         let html = [];
-        serviceCall:try {
-            let tk = await this.refreshToken();
-            if(tk==undefined){
-              break serviceCall;
-            }
-            
-            subData.map((productRow,j)=>{
-                productRow.map(async(product,k)=>{
-                    if(Object.keys(product).length==0) return;
-                    let newProd = product;
-                    //console.log(product)
-                    let suggestions = [];
-                    if(product.vm_forecast_dash_obs_cliente != "UP"){
-                        try {
-                            const slug = await get_slug(tk,QUERY_RECOMMENDATIONS(product));
-                            try{
-                                suggestions = await get_all_data(slug,tk); //LOOKER JSONS
-                            }catch(e){
-                                console.error("No se pudo obtener el resultado del query:", e);
-                            }
-                        } catch (error) {
-                            console.error("No se pudo obtener el Token:", error);
+        let tk = this.state.tkn;
+        
+        subData.map((productRow,j)=>{
+            productRow.map(async(product,k)=>{
+                if(Object.keys(product).length==0) return;
+                let newProd = product;
+                //console.log(product)
+                let suggestions = [];
+                if(product.vm_forecast_dash_obs_cliente != "UP"){
+                    try {
+                        const slug = await get_slug(tk,QUERY_RECOMMENDATIONS(product));
+                        try{
+                            suggestions = await get_all_data(slug,tk); //LOOKER JSONS
+                        }catch(e){
+                            console.error("No se pudo obtener el resultado del query:", e);
                         }
+                    } catch (error) {
+                        console.error("No se pudo obtener el Token:", error);
                     }
-                    newProd.suggestions = suggestions;
-                    newProd.x=j+1;
-                    newProd.y=k+1;
-                    html.push(newProd);
-                }) 
-            })
-        }catch(e){
-            console.log("Error Recomendations:"+e);
-        }
+                }
+                newProd.suggestions = suggestions;
+                newProd.x=j+1;
+                newProd.y=k+1;
+                html.push(newProd);
+            }) 
+        })
         this.setState({recommended:html});
         return html;
     }
-
-    refreshToken = async ()=>{
-        const lastTkn = this.state.lastTkn;
-        const tkn = this.state.tkn;
-    
-        if(Date.now() > lastTkn+(3500000)){
-          const response = await oauth_login();
-          if(response?.access_token == undefined && tkn!=undefined){
-            return tkn;
-          }
-          let tk = response?.access_token;
-          this.setState({tkn:tk,lastTkn:Date.now()});
-          return tk;
-        }else{
-          return tkn;
-        }
-      }
-
-
-
 
 }
 export default Recommendations;

@@ -68,7 +68,7 @@ class Dashboard extends Component {
          pdvVending:[],
 
          tkn:"",
-         lastTkn:"",
+         lastTkn:0,
      }
   }
 
@@ -172,7 +172,7 @@ class Dashboard extends Component {
     return (
       <>
         <Container id="wrapper-background" style={{height:windowSize+"px"}} onMouseMove={()=>{windowSize=window.innerHeight}}>
-          <Recommendations dataBefore={productsInVending} dataAfter={upgradedVending} show={showRecom} allData={this.sortForecastData(productsData)} changeShow={()=>{this.setState({showRecom:!showRecom})}}/>
+          <Recommendations dataBefore={productsInVending} dataAfter={upgradedVending} show={showRecom} allData={this.sortForecastData(productsData)} changeShow={()=>{this.setState({showRecom:!showRecom})}} tkn={this.state.tkn}/>
           <Row id="wrapper">
           {selectedClient==""?"":
             <Row className="vender-title-pdv" style={{height:"5%"}}>
