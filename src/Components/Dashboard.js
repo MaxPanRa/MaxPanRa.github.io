@@ -119,12 +119,9 @@ class Dashboard extends Component {
 
   componentDidMount= async ()=>{
     let pdvs = [];
-    serviceCall:try {
-      let tk = await this.refreshToken();
-      if(tk==undefined){
-        pdvs=pdvsJson;
-        break serviceCall;
-      }
+    try {
+      const response = await oauth_login();
+      let tk = response.access_token;
         
       const slug = await get_slug(tk,QUERY_PDVS);
       try{
