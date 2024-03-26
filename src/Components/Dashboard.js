@@ -94,8 +94,13 @@ class Dashboard extends Component {
     this.setState({vendingEmpty:this.empty2dArray(vendingRows,vendingCols)});
     this.setState({productsInVending:this.empty2dArray(vendingRows,vendingCols)});
     let pdvs = [];
-    try {
+    serviceCall:try {
       let tk = await this.refreshToken();
+      if(tk==undefined){
+        pdvs=pdvsJson;
+        break serviceCall;
+      }
+        
       const slug = await get_slug(tk,QUERY_PDVS);
       try{
         pdvs = await get_all_data(slug,tk); //LOOKER JSONS
@@ -379,8 +384,12 @@ class Dashboard extends Component {
     const {vendingCols,vendingRows} = this.state;
     this.setState({selectedPDV:value});
     let products = []; //query to get Products
-    try {
+    serviceCall:try {
       let tk = await this.refreshToken();
+      if(tk==undefined){
+        products=data;
+        break serviceCall;
+      }
       const slug = await get_slug(tk,QUERY_MACHINE_PRODUCTS(value));
       try{
         products = await get_all_data(slug,tk); //LOOKER JSONS

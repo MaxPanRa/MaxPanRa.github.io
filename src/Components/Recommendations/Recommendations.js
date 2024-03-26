@@ -78,8 +78,11 @@ class Recommendations extends Component {
         const {allData} = this.state;
         
         let html = [];
-        try {
+        serviceCall:try {
             let tk = await this.refreshToken();
+            if(tk==undefined){
+              break serviceCall;
+            }
             
             subData.map((productRow,j)=>{
                 productRow.map(async(product,k)=>{
