@@ -17,6 +17,7 @@ class Recommendations extends Component {
            dataBefore: [],
            dataAfter: [],
            show: false, 
+           recommended:[],
        };
     }
 
@@ -26,6 +27,8 @@ class Recommendations extends Component {
             dataBefore:this.props.dataBefore,
             dataAfter:this.props.dataAfter,
             show: this.props.show
+        },()=>{
+            this.searchRecommendations(this.state.dataBefore);
         })
         //console.log("RECOMM Before:"+JSON.stringify(this.props.dataBefore))
         //console.log("RECOMM After:"+JSON.stringify(this.props.dataAfter))
@@ -34,6 +37,7 @@ class Recommendations extends Component {
     componentDidUpdate(prevProps){
         if (this.props.dataBefore !== prevProps.dataBefore) {
             this.setState({ dataBefore: this.props.dataBefore });
+            this.searchRecommendations(this.props.dataBefore);
         }
         if (this.props.dataAfter !== prevProps.dataAfter) {
             this.setState({ dataAfter: this.props.dataAfter });
@@ -45,7 +49,7 @@ class Recommendations extends Component {
 
     render(){
         //console.log(data);
-        const {dataBefore,dataAfter,show}=this.state;
+        const {dataBefore,dataAfter,show, recommended}=this.state;
         return (
             <Container className={show ? "recom-show blackdrop":"recom-hide blackdrop"}>
                 <Container className="recom-white">
@@ -55,7 +59,7 @@ class Recommendations extends Component {
                     <Row className="prod-block-div-row-1">
                         <Col>
                             <Container className="aftrem">
-                            {this.searchRecommendations(dataBefore).map((x,k)=>
+                            {recommended.map((x,k)=>
                             <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
                             <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
                                 {x.suggestions.map((y,l)=>
@@ -111,7 +115,7 @@ class Recommendations extends Component {
         }catch(e){
             console.log("Error Recomendations:"+e);
         }
-        
+        this.setState({recommended:html});
         return html;
     }
 
