@@ -1,0 +1,356 @@
+[
+    {
+      "f_PRODUCTOID": 8021,
+      "p_PRODUCTO": "Bt Coca-Cola 600ml NR",
+      "p_tipo": "bebida",
+      "max_forecast_value": 704.1819060456965
+    },
+    {
+      "f_PRODUCTOID": 240,
+      "p_PRODUCTO": "PROTEUS PONCHE 15G",
+      "p_tipo": "bebida",
+      "max_forecast_value": 276.85685286823184
+    },
+    {
+      "f_PRODUCTOID": 238,
+      "p_PRODUCTO": "PROTEUS UVA 15G",
+      "p_tipo": "bebida",
+      "max_forecast_value": 135.12867513442762
+    },
+    {
+      "f_PRODUCTOID": 5802,
+      "p_PRODUCTO": "SABRITAS DORITOS NACHO 62G",
+      "p_tipo": "botana",
+      "max_forecast_value": 125.3929982154953
+    },
+    {
+      "f_PRODUCTOID": 7639,
+      "p_PRODUCTO": "BT CC sin Azúcar 600ml NR Pet",
+      "p_tipo": "bebida",
+      "max_forecast_value": 102.26666666666667
+    },
+    {
+      "f_PRODUCTOID": 5131,
+      "p_PRODUCTO": "Enre2 Spicycante Bokados 75g",
+      "p_tipo": "botana",
+      "max_forecast_value": 90.00313701444534
+    },
+    {
+      "f_PRODUCTOID": 5188,
+      "p_PRODUCTO": "Mix Bokados 90g",
+      "p_tipo": "botana",
+      "max_forecast_value": 73.86487070685736
+    },
+    {
+      "f_PRODUCTOID": 2875,
+      "p_PRODUCTO": "Doraditas Tía Rosa",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 71.42513813226965
+    },
+    {
+      "f_PRODUCTOID": 2875,
+      "p_PRODUCTO": "Doraditas Tí­a Rosa",
+      "p_tipo": "",
+      "max_forecast_value": 71.42513813226965
+    },
+    {
+      "f_PRODUCTOID": 2808,
+      "p_PRODUCTO": "Bokaditas Bokados 75g",
+      "p_tipo": "botana",
+      "max_forecast_value": 69.888831322574
+    },
+    {
+      "f_PRODUCTOID": 8309,
+      "p_PRODUCTO": "BT TCh Sangria 600 Mls Nr",
+      "p_tipo": "bebida",
+      "max_forecast_value": 69.34108950708165
+    },
+    {
+      "f_PRODUCTOID": 2833,
+      "p_PRODUCTO": "Golos Sal y Ch Bokados",
+      "p_tipo": "botana",
+      "max_forecast_value": 67.22745944526265
+    },
+    {
+      "f_PRODUCTOID": 8059,
+      "p_PRODUCTO": "Bt Fresca 600ml NR",
+      "p_tipo": "bebida",
+      "max_forecast_value": 64.8409090909091
+    },
+    {
+      "f_PRODUCTOID": 2880,
+      "p_PRODUCTO": "Chocolate Snickers",
+      "p_tipo": "dulceria",
+      "max_forecast_value": 64.36345104963338
+    },
+    {
+      "f_PRODUCTOID": 5168,
+      "p_PRODUCTO": "Pastillas Jolly Rancher",
+      "p_tipo": "dulceria",
+      "max_forecast_value": 61.66713509441544
+    },
+    {
+      "f_PRODUCTOID": 1730,
+      "p_PRODUCTO": "Coyota de Cajeta DMaravilla 1P",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 59.73407671708485
+    },
+    {
+      "f_PRODUCTOID": 2849,
+      "p_PRODUCTO": "Bran Frut Fresa Bimbo 40g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 56.66409746046976
+    },
+    {
+      "f_PRODUCTOID": 1113,
+      "p_PRODUCTO": "OREO GALLETA 68.4G",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 54.68852568176213
+    },
+    {
+      "f_PRODUCTOID": 5135,
+      "p_PRODUCTO": "Golo Confix Bokados 65g",
+      "p_tipo": "botana",
+      "max_forecast_value": 53.37428147796192
+    },
+    {
+      "f_PRODUCTOID": 2894,
+      "p_PRODUCTO": "Strips Bokados 75g",
+      "p_tipo": "botana",
+      "max_forecast_value": 50.80222999868289
+    },
+    {
+      "f_PRODUCTOID": 2879,
+      "p_PRODUCTO": "Chocolate M&M Peanut",
+      "p_tipo": "dulceria",
+      "max_forecast_value": 50.43658423364473
+    },
+    {
+      "f_PRODUCTOID": 9134,
+      "p_PRODUCTO": "SABRITAS RANCHERITOS 56G",
+      "p_tipo": "botana",
+      "max_forecast_value": 48.829330522962294
+    },
+    {
+      "f_PRODUCTOID": 2828,
+      "p_PRODUCTO": "Halls Menta Adams",
+      "p_tipo": "dulceria",
+      "max_forecast_value": 47.0134969398624
+    },
+    {
+      "f_PRODUCTOID": 2912,
+      "p_PRODUCTO": "Submarino Vainilla Marinela",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 44.134385683479906
+    },
+    {
+      "f_PRODUCTOID": 2845,
+      "p_PRODUCTO": "Polvorones Marinela 113g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 44.07160940486091
+    },
+    {
+      "f_PRODUCTOID": 2809,
+      "p_PRODUCTO": "Chicharron Cerdo Bokados 30g",
+      "p_tipo": "botana",
+      "max_forecast_value": 42.71205762852321
+    },
+    {
+      "f_PRODUCTOID": 2967,
+      "p_PRODUCTO": "Semita de Nuez Almadén 110g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 41.12685401736499
+    },
+    {
+      "f_PRODUCTOID": 8000,
+      "p_PRODUCTO": "Bt Ciel AP 600 ml NR",
+      "p_tipo": "bebida",
+      "max_forecast_value": 40.73076923076923
+    },
+    {
+      "f_PRODUCTOID": 2847,
+      "p_PRODUCTO": "Barritas de Piña Marinela 64g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 38.22603909443002
+    },
+    {
+      "f_PRODUCTOID": 5803,
+      "p_PRODUCTO": "SABRITAS CHEETOS TORCIDITO 52G",
+      "p_tipo": "botana",
+      "max_forecast_value": 37.72300176084118
+    },
+    {
+      "f_PRODUCTOID": 50,
+      "p_PRODUCTO": "BIMBO BIMBUÑUELOS 66G",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 36.773182737566216
+    },
+    {
+      "f_PRODUCTOID": 552,
+      "p_PRODUCTO": "BOKADOS TOPITOS GRILL 65GR",
+      "p_tipo": "botana",
+      "max_forecast_value": 36.49430515377803
+    },
+    {
+      "f_PRODUCTOID": 8445,
+      "p_PRODUCTO": "BT Valle Frut Nar 600 ml NR",
+      "p_tipo": "bebida",
+      "max_forecast_value": 36.15
+    },
+    {
+      "f_PRODUCTOID": 9403,
+      "p_PRODUCTO": "Barrinolas Arandano 36gr",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 36
+    },
+    {
+      "f_PRODUCTOID": 2947,
+      "p_PRODUCTO": "Minigalletas Coco LF 60g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 35.90968345457504
+    },
+    {
+      "f_PRODUCTOID": 5781,
+      "p_PRODUCTO": "SABRITAS RUFFLES QUESO 53G",
+      "p_tipo": "botana",
+      "max_forecast_value": 33.63095238095238
+    },
+    {
+      "f_PRODUCTOID": 2966,
+      "p_PRODUCTO": "Topitos 360 Bokados 60g",
+      "p_tipo": "botana",
+      "max_forecast_value": 32.190186676187935
+    },
+    {
+      "f_PRODUCTOID": 2850,
+      "p_PRODUCTO": "Bran Frut Piña Bimbo 40g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 30.226527626936583
+    },
+    {
+      "f_PRODUCTOID": 3447,
+      "p_PRODUCTO": "MARINELA PRINCIPE 64GR",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 29.99276457446695
+    },
+    {
+      "f_PRODUCTOID": 227,
+      "p_PRODUCTO": "MARINELA PRINCIPE 63GR",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 27.846330856851488
+    },
+    {
+      "f_PRODUCTOID": 2822,
+      "p_PRODUCTO": "Submarino Fresa Marinel 105g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 27.626416496487668
+    },
+    {
+      "f_PRODUCTOID": 2851,
+      "p_PRODUCTO": "Cacahuate Salado Bokados 45g",
+      "p_tipo": "botana",
+      "max_forecast_value": 27.311262591590836
+    },
+    {
+      "f_PRODUCTOID": 2813,
+      "p_PRODUCTO": "Cacahuate Japones Bokados 45g",
+      "p_tipo": "botana",
+      "max_forecast_value": 27.150000000000002
+    },
+    {
+      "f_PRODUCTOID": 2959,
+      "p_PRODUCTO": "Trident XCare FreshMint Adams",
+      "p_tipo": "dulceria",
+      "max_forecast_value": 25.47826456159608
+    },
+    {
+      "f_PRODUCTOID": 2838,
+      "p_PRODUCTO": "Topitos Nachos Bokados 65g",
+      "p_tipo": "botana",
+      "max_forecast_value": 24.98735849724085
+    },
+    {
+      "f_PRODUCTOID": 2855,
+      "p_PRODUCTO": "Skwinkles Piña/Tama Lucas 26g",
+      "p_tipo": "dulceria",
+      "max_forecast_value": 24
+    },
+    {
+      "f_PRODUCTOID": 2839,
+      "p_PRODUCTO": "Topitos Jalapeños Bokados 65g",
+      "p_tipo": "botana",
+      "max_forecast_value": 23.598889736414968
+    },
+    {
+      "f_PRODUCTOID": 2823,
+      "p_PRODUCTO": "Rebanada Bimbo 55g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 23.204572579329938
+    },
+    {
+      "f_PRODUCTOID": 2817,
+      "p_PRODUCTO": "Pinguino Marinel 80g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 20.5
+    },
+    {
+      "f_PRODUCTOID": 4800,
+      "p_PRODUCTO": "SR NATURAL NUEZ 50GR",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 19.115625874044646
+    },
+    {
+      "f_PRODUCTOID": 5756,
+      "p_PRODUCTO": "SABRITAS PAPAS SAL 45G",
+      "p_tipo": "botana",
+      "max_forecast_value": 17.993704100437974
+    },
+    {
+      "f_PRODUCTOID": 2943,
+      "p_PRODUCTO": "Galleta Chips Ahoy 57g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 17.63973605046688
+    },
+    {
+      "f_PRODUCTOID": 2843,
+      "p_PRODUCTO": "Mantecadas Bimbo 125g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 16.745171535161155
+    },
+    {
+      "f_PRODUCTOID": 2887,
+      "p_PRODUCTO": "Bokachito Tornillo Bokados",
+      "p_tipo": "botana",
+      "max_forecast_value": 15.784952814690383
+    },
+    {
+      "f_PRODUCTOID": 3448,
+      "p_PRODUCTO": "MARINELA TRIKI TRAKES 51GR",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 13.225658897665085
+    },
+    {
+      "f_PRODUCTOID": 2821,
+      "p_PRODUCTO": "Canelitas Marinela 90g",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 1.94127438759892
+    },
+    {
+      "f_PRODUCTOID": 4805,
+      "p_PRODUCTO": "SR NATURAL CHOCO CHIPS 50GR",
+      "p_tipo": "panaderia",
+      "max_forecast_value": 0
+    },
+    {
+      "f_PRODUCTOID": 4203,
+      "p_PRODUCTO": "BERRY NUTS ARANDA & ALMEN 25G",
+      "p_tipo": "dulceria",
+      "max_forecast_value": -0.0698728088759708
+    },
+    {
+      "f_PRODUCTOID": 59,
+      "p_PRODUCTO": "TIA ROSA MUFFIN CASERO 130G",
+      "p_tipo": "panaderia",
+      "max_forecast_value": -1.2588077016457504
+    }
+  ]

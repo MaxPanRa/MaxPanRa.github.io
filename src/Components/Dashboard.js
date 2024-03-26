@@ -11,11 +11,15 @@ import Col from 'react-bootstrap/Col';
 
 import Product from './Product/Product';
 import { get_all_data, get_slug, oauth_login } from "../LookerSession";
-import data from './data.json';
+import data from './035457.json';
+import pdvsJson from './pdvs.json';
 
-import { Button, Carousel, Image, Input, Space, Tooltip } from 'antd';
-import { CheckCircleOutlined, ClearOutlined, CompassOutlined, EyeOutlined, ReloadOutlined, SearchOutlined, StarOutlined, StopOutlined } from "@ant-design/icons";
-import { ALLFILTERS } from "../Constants";
+import { Button, Carousel, Image, Input, Select, Space, Tooltip } from 'antd';
+import { Option } from "antd/es/mentions";
+import { CheckCircleOutlined, ClearOutlined, CompassOutlined, EyeInvisibleOutlined, EyeOutlined, LeftSquareOutlined, ReloadOutlined, RightSquareOutlined, SearchOutlined, StarOutlined, StopOutlined } from "@ant-design/icons";
+import { ALLFILTERS, QUERY_MACHINE_PRODUCTS, QUERY_PDVS, SLUG_QUERY } from "../Constants";
+import Recommendations from "./Recommendations/Recommendations";
+import { keyboard } from "@testing-library/user-event/dist/keyboard";
 
 const PieChartOPTIONS = {
   legend:"none",
@@ -40,7 +44,7 @@ class Dashboard extends Component {
          allProductsData:null,
          hoverObject:{},
          vendingProdsByCell:6,
-         vendingRows:5,
+         vendingRows:4,
          vendingCols:10,
          query:"",
          queryProducts:[],
@@ -52,18 +56,58 @@ class Dashboard extends Component {
          selectedProduct:{},
          vendingEmpty:[],
          productsInVending:[],
+         upgradedVending:[],
          upgradedView:false,
          suggestionView:false,
+         showRecom:false,
+
+         pdvs:[],
+         selectedClient:"",
+         selectedPDV:"",
+         lastPDVDate:"",
+         pdvVending:[],
+
+         tkn:"",
+         lastTkn:"",
      }
   }
 
-  componentWillMount=()=>{
+  refreshToken = async ()=>{
+    const lastTkn = this.state.lastTkn;
+    const tkn = this.state.tkn;
+
+    if(Date.now() > lastTkn+3500){
+      const response = await oauth_login();
+      let tk = response.access_token;
+      this.setState({tkn:tk,lastTkn:Date.now()});
+      window.history.replaceState(null, '', window.location.pathname);
+      return tk;
+    }else{
+      return tkn;
+    }
+  }
+
+  componentWillMount = async ()=>{
     const jsonData = data;
     this.setState({jsonData})
     const {vendingCols,vendingRows} = this.state;
     //console.log(this.empty2dArray(vendingRows,vendingCols));
     this.setState({vendingEmpty:this.empty2dArray(vendingRows,vendingCols)});
     this.setState({productsInVending:this.empty2dArray(vendingRows,vendingCols)});
+    let pdvs = [];
+    try {
+      let tk = await this.refreshToken();
+      const slug = await get_slug(tk,QUERY_PDVS);
+      try{
+        pdvs = await get_all_data(slug,tk); //LOOKER JSONS
+      }catch(e){
+        console.error("No se pudo obtener el resultado del query:", e);
+        pdvs=pdvsJson;  //LOCAL JSONS
+      }
+    } catch (error) {
+      console.error("No se pudo obtener el Token:", error);
+    }
+    this.setState({pdvs})
   }
 
   empty2dArray(x,y){
@@ -79,30 +123,12 @@ class Dashboard extends Component {
   }
 
   componentDidMount= async ()=>{
-    let jsonData = this.state.jsonData;
-    let tk = "";
-    //debugger;
-    /*try {
-      const response = await oauth_login();
-      //debugger;
-      //console.log("TOKEN?"+response);
-      tk = response.access_token;
-      const slug = await get_slug(tk);
-      try{
-        jsonData = await get_all_data(slug,tk);
-        window.history.replaceState(null, '', window.location.pathname);
-      }catch(e){
-        jsonData=this.state.jsonData; 
-      }
-
-      this.setState({ data });
-    } catch (error) {
-      console.error("There was a problem with the fetch operation:", error);
-    }*/
-
+    //let jsonData = this.state.jsonData;
+    /*
     this.setState({jsonData},()=>{
       this.setState({productsData:jsonData},()=>{
         this.getProducts();
+        this.upgradeAll(true);
       });
       let productsVend=[];
       
@@ -116,21 +142,35 @@ class Dashboard extends Component {
       this.setState({productsInVending:productsVend});
       this.calculateGeneralCharts(productsVend);
     })
+    */
+    //this.setState({jsonData});
   }
 
   render() {
-    const {vendingRows,vendingCols,query, searchArca, typeProduct, hoverObject,productCharts, generalCharts, productsInVending, suggestionView, queryProducts, upgradedView, productsData, filteredData} = this.state;
-    //oauth_login();
+    const {vendingRows,vendingCols,query, searchArca, typeProduct, hoverObject,productCharts, generalCharts, 
+      productsInVending, suggestionView, queryProducts, upgradedView, upgradedVending, productsData, filteredData, showRecom,
+      pdvs, selectedClient, selectedPDV, lastPDVDate, pdvVending} = this.state;
     
     const vendR= this.createArray(vendingRows);
     const vendC= this.createArray(vendingCols);
     let windowSize= window.innerHeight;
+    
     if(productCharts==[] || productsData==[])
     return "";
     return (
       <>
         <Container id="wrapper-background" style={{height:windowSize+"px"}} onMouseMove={()=>{windowSize=window.innerHeight}}>
+          <Recommendations dataBefore={productsInVending} dataAfter={upgradedVending} show={showRecom} allData={this.sortForecastData(productsData)} changeShow={()=>{this.setState({showRecom:!showRecom})}}/>
           <Row id="wrapper">
+          {selectedClient==""?"":
+            <Row className="vender-title-pdv" style={{height:"5%"}}>
+              <div className="title-vender"><h1>{selectedClient}</h1></div>
+              {selectedPDV==""?"":
+              <div className="title-vender title-vender-pdv"><h1>{"->  "+selectedPDV}</h1></div>}
+              {lastPDVDate==""?"":
+              <div className="title-vender title-vender-date"><h1>{" -  Última Visita: "+lastPDVDate}</h1></div>}
+            </Row>
+          }
             <Row id="vending-wrap" style={{height:"50%"}}>
               <Col sm={9} className="vend-col">
                 <Row className="vending-row">
@@ -144,11 +184,12 @@ class Dashboard extends Component {
                           return (
                             <Col onClick={()=>{this.moveProductVending(j,k)}} key={k} className={Object.keys(productsInVending[j][k]).length > 0 ? upgClass+"vending-prod filled-vend":upgClass+"vending-prod"} 
                               style={{"maxWidth":"80px","maxHeight":"100px","width":""+100/vendC.length+"%"}}>{
-                                Object.keys(productsInVending[j][k]).length > 0? 
-                                  <Tooltip title={""+productsInVending[j][k].vm_forecast_dash_producto} className={"btn-vend"}>
-                                    <Image preview={false} src={this.checkImageRegex(productsInVending[j][k].vm_forecast_dash_type)}/>
-                                    {productsInVending[j][k].vm_forecast_dash_arca=="true"?<img src={"/Images/ARCAIcon.png"} alt={data.vm_forecast_dash_producto} className="arca-Icon-vend"/>:""}
-                                    <span className="btn-vend-txt">{productsInVending[j][k].vm_forecast_dash_producto}</span>
+                                productsInVending.length>0 && Object.keys(productsInVending[j][k]).length > 0? 
+                                  <Tooltip title={""+productsInVending[j][k].vm_forecast_dash_PRODUCTO} className={"btn-vend"}>
+                                    <Image preview={false} src={this.checkImageRegex(productsInVending[j][k].cp_tipo)}/>
+                                    {productsInVending[j][k].cp_arca=="true"?<img src={"/Images/ARCAIcon.png"} alt={data.vm_forecast_dash_PRODUCTO} className="arca-Icon-vend"/>:""}
+                                    <span className={"btn-vend-txt"}>{productsInVending[j][k].vm_forecast_dash_PRODUCTO}</span>
+                                    <span className={productsInVending[j][k].vm_forecast_dash_row_num==((k+1)+(vendC.length*j))?"btn-vend-ROW":productsInVending[j][k].vm_forecast_dash_obs_cliente+"-upg-vend btn-vend-ROW"}>{productsInVending[j][k].vm_forecast_dash_row_num}</span>
                                   </Tooltip>:
                                     <Tooltip title="Vacío" className="btn-vend-empty">
                                       <div style={{height:"100%",width:"100%"}}> </div>
@@ -198,61 +239,87 @@ class Dashboard extends Component {
               </Col>
               <Col sm={3} id="vending-charts">
                 <Row className="vending-row">
-                  <Row className="vending-actions">
-                    <Tooltip title="Alternar Vista" className="tool-vend" >
-                      <Button type={upgradedView?"dashed":"primary"} shape="round" icon={<EyeOutlined />} onClick={()=>{this.alternateVista()}} style={{}}/>
-                    </Tooltip>
-                      {suggestionView?
-                      <Tooltip title="Salir de Sugerencia Mejorada" className="tool-vend">
-                        <Button type="dashed" shape="round" icon={<StopOutlined />} onClick={()=>{this.removeUpgrade()}} />
-                      </Tooltip> 
-                      :
-                      <Tooltip title="Mostrar Sugerencia Mejorada" className="tool-vend">
-                        <Button type="primary" shape="round" icon={<CheckCircleOutlined />} onClick={()=>{this.upgradeAll()}} />
-                      </Tooltip>
+                  <Row className="vending-opts">
+                  {selectedClient!=""?"":<h2 className="select-Aviso">SELECCIONE UN CLIENTE</h2>}
+                  {selectedClient!="" && selectedPDV=="" ?<h2 className="select-Aviso">AHORA SELECCIONE UN PUNTO DE VENTA</h2>:""}
+                    <Row className="vender-chose" >
+                      <Col sm={12}>
+                        <Select className={selectedClient!=""?"clients-combo":"unselected-combo clients-combo"} value={selectedClient} onChange={(obj)=>{this.changeClientsCombo(obj)}} >
+                        <Option value="" selected>Elige un Cliente</Option>
+                          {pdvs.map((x,k,arr)=> {
+                            const prevPerson = arr[k - 1];
+                            if (prevPerson?.CLIENTE==x.CLIENTE) return;
+                            else return(<Option key={k} value={x.CLIENTE}>{x.CLIENTE}</Option>)
+                            }
+                          )}
+                        </Select>
+                      </Col>
+                      {selectedClient!=""?
+                      <Col sm={12}>
+                        <Select className={selectedPDV!=""?"pdvs-combo":"unselected-combo pdvs-combo"} value={selectedPDV} onChange={(obj)=>{this.changePDVCombo(obj)}} >
+                        <Option value="" disabled selected>Elige un Punto de Venta</Option>
+                          {pdvs.map((x,k,arr)=> {
+                            const prevPerson = arr[k - 1];
+                              if (x.CLIENTE == selectedClient)
+                                return(<Option key={k} value={x.PDV}>{x.PDV}</Option>)
+                            }
+                          )}
+                        </Select>
+                      </Col>
+                      :""}
+                    </Row>
+                    {selectedPDV==""?"":
+                      <Row className="vending-actions">
+                        <Tooltip title="Alternar Vista" className="tool-vend" >
+                          <Button type={upgradedView?"dashed":"primary"} shape="round" icon={upgradedView?<EyeInvisibleOutlined/> : <EyeOutlined />} onClick={()=>{this.alternateVista()}} style={{}}/>
+                        </Tooltip>
+                        { suggestionView?
+                          <Tooltip title="Salir de Sugerencia Mejorada" className="tool-vend">
+                            <Button type="dashed" shape="round" icon={<StopOutlined />} onClick={()=>{this.removeUpgrade()}} />
+                          </Tooltip> 
+                          :
+                          <Tooltip title="Mostrar Sugerencia Mejorada" className="tool-vend">
+                            <Button type="primary" shape="round" icon={<CheckCircleOutlined />} onClick={()=>{this.upgradeAll(false)}} />
+                          </Tooltip>
+                        }
+                        {productsInVending != pdvVending?
+                        <Tooltip title="Recargar Datos de PDV" className="tool-vend" >
+                          <Button type="dashed" shape="round" icon={<ReloadOutlined />} onClick={()=>{this.changePDVCombo(selectedPDV)}}/>
+                        </Tooltip>:""}
+                        {this.vendingHasProducts()?
+                        <Tooltip title="Vaciar Máquina" className="tool-vend" >
+                          <Button type="dashed" shape="circle" icon={<ClearOutlined />} onClick={()=>{this.cleanVending()}} style={this.vendingHasProducts()?{opacity:1}:{opacity:0,pointerEvents:"none"}}/>
+                        </Tooltip> :""}
+                        
+                        {suggestionView && JSON.stringify(productsInVending)!=sessionStorage.getItem("savedVending") ?
+                        ""/*<Tooltip title="Mantener Mejora" className="tool-vend" >
+                          <Button type="primary" shape="circle" icon={<StarOutlined />} onClick={()=>{this.maintainVending()}} style={{}}/>
+                        </Tooltip>*/ :""}
+                      </Row>
                     }
-                    {this.vendingHasProducts()?
-                    <Tooltip title="Vaciar Máquina" className="tool-vend" >
-                      <Button type="dashed" shape="round" icon={<ClearOutlined />} onClick={()=>{this.cleanVending()}} style={this.vendingHasProducts()?{opacity:1}:{opacity:0,pointerEvents:"none"}}/>
-                    </Tooltip> :""}
-                    {suggestionView && JSON.stringify(productsInVending)!=sessionStorage.getItem("savedVending") ?
-                    <Tooltip title="Mantener Mejora" className="tool-vend" >
-                      <Button type="primary" shape="circle" icon={<StarOutlined />} onClick={()=>{this.maintainVending()}} style={{}}/>
-                    </Tooltip> :""}
                   </Row>
                 {generalCharts.length==0 ?"":
                   generalCharts.map((data,k)=>
                   <Col key={k} sm={12} className="chartBox">
-                    <BinaryPieChart title={data.title} data={data.axis} options={PieChartOPTIONS} size={data.size+"px"}/>
+                    <BinaryPieChart title={data.title} data={data.axis} options={PieChartOPTIONS} size={data.size+"px"} isMoney={data.title.toUpperCase().includes("VENTA")}/>
                   </Col>
                   )}
+                  {selectedPDV==""?"":
                   <Tooltip title="Ver Recomendaciones" className="tool-vend recommTool" >
-                    <Button type="primary" shape="round" icon={<CompassOutlined />} onClick={()=>{this.showRecomendations()}} style={{}}/>
+                    <Button type="primary" shape="round" icon={<CompassOutlined />} onClick={()=>{this.showRecomendations()}} style={{}}>Recomendaciones</Button>
                   </Tooltip>
+                  }
                 </Row>
               </Col>
             </Row>
-            <Row id="charts-products-wrap" style={{height:"50%"}}>
-              <Col sm={12} md={3} id="product-charts">
-                <Container className="containPad">
-                  <Row className='pie-chart-block blue-box'>
-                    <div className="title-card"><h2>{hoverObject.vm_forecast_dash_producto!=null?hoverObject.vm_forecast_dash_producto:"Información del Producto"}</h2></div>
-                    {productCharts.length==0?"":
-                      productCharts.map((data,k)=>
-                      <Col key={k} sm={12} className="chartBox">
-                        <BinaryPieChart title={data.title} data={data.axis} options={PieChartOPTIONS} size={data.size+"px"}/>
-                      </Col>
-                    )}
-                  </Row>
-                </Container>
-              </Col>
-              <Col sm={12} md={7} id="products-section">
+            <Row id="charts-products-wrap" style={{height:"45%"}}>
+              <Col sm={12} md={9} id="products-section">
                 <Container className="containPad">
                   <Col sm={12} md={10} id="carousel-box">
                     <Row className="gray-box">
-                      <h1>SOCVI</h1>
+                      {selectedPDV!=""?<h1>SOCVI</h1>:""}
                       {queryProducts.length == 0 ? "":
-                      <Carousel touchMove={true} arrows afterChange={this.onChange} dots={true} dotWidth={20} /*prevArrow={<LeftSquareOutlined />} nextArrow={<RightSquareOutlined />}*/ >
+                      <Carousel touchMove={true} arrows afterChange={this.onChange} dots={true} dotWidth={20} prevArrow={<LeftSquareOutlined />} nextArrow={<RightSquareOutlined />} >
                         {queryProducts.map((x)=>x)}
                         </Carousel>
                       }
@@ -260,14 +327,17 @@ class Dashboard extends Component {
                   </Col>
                 </Container>
               </Col>
-              <Col sm={12} md={2} id="search-section">
+              <Col sm={12} md={3} id="search-section">
                 <Container className="containPad">
                   <Row className="blue-box">
+                    {filteredData.length==0?"":
                     <Col sm={12} md={10} id="search-bar" >
                       <Row className="search-section-in">
                         <Input placeholder="Texto a Buscar" className="search-inp" value={query} onChange={(val)=>{this.setState({query:val.currentTarget.value})}} />
                       </Row>
                     </Col>
+                    }
+                    {filteredData.length==0?"":
                     <Col sm={12} md={22} id="carousel-sett">
                       <Row className="multi-button">
                         <div className="subtitle-card"><h2>Marca</h2></div>
@@ -290,6 +360,7 @@ class Dashboard extends Component {
                       {productsData.length!=filteredData.length?<Col><Tooltip title="Reiniciar"><Button type="dashed" className="search-btn" style={{padding:"0px 10px"}} onClick={()=>this.resetSearch()}><ReloadOutlined style={{ fontSize: '23px'}} /></Button></Tooltip></Col>:""}
                       </Row>
                     </Col>
+                    }
                   </Row>
                 </Container>
               </Col>
@@ -300,6 +371,68 @@ class Dashboard extends Component {
     )
   }
 
+  changeClientsCombo  = (value)=>{
+    this.setState({selectedClient:value,selectedPDV:""});
+  }
+  changePDVCombo = async (value)=>{
+    //FIND QUERY OBJECTS
+    const {vendingCols,vendingRows} = this.state;
+    this.setState({selectedPDV:value});
+    let products = []; //query to get Products
+    try {
+      let tk = await this.refreshToken();
+      const slug = await get_slug(tk,QUERY_MACHINE_PRODUCTS(value));
+      try{
+        products = await get_all_data(slug,tk); //LOOKER JSONS
+      }catch(e){
+        console.error("No se pudo obtener el resultado del query:", e);
+        products=data;  //LOCAL JSONS
+      }
+    } catch (error) {
+      console.error("No se pudo obtener el Token:", error);
+    }
+
+    this.setState({productsData:products},()=>{
+      this.getProducts();
+      this.addVendingProducts();
+    });
+  }
+
+  addVendingProducts=()=>{
+    const {vendingRows,vendingCols, productsData} = this.state;
+    let cleanedData = [];
+    cleanedData=this.sortRowData(productsData);
+    let productsInVending = this.empty2dArray(vendingRows,vendingCols);
+    let lastDate="";
+    //debugger;
+    //console.log(JSON.stringify(productsInVending));
+    cleanedData.map((data,i)=>{
+      let added = false;
+      productsInVending.map((y,j)=> {
+        //console.log("row:"+y);
+        if(added) return;
+        for(let k=0;k<y.length;k++){
+          //console.log("col:"+x);
+          if(added)break;
+          if(Object.keys(productsInVending[j][k]).length==0){
+            added=true;
+            productsInVending[j][k]=data;
+            lastDate=data.vm_forecast_dash_fecha_visita;
+          }
+        }
+      });
+    });
+    this.setState({
+      productsInVending,
+      pdvVending:productsInVending,
+      lastPDVDate:lastDate
+    },()=>{
+      console.log(this.state.pdvVending,this.state.productsInVending,this.state.pdvVending==this.state.productsInVending)
+      this.maintainVending()
+    });
+    
+    this.calculateGeneralCharts(productsInVending);
+  }
   vendingHasProducts=()=>{
     const {productsInVending} = this.state;
     let hasProducts = false;
@@ -316,7 +449,8 @@ class Dashboard extends Component {
   }
 
   alternateVista=()=>{
-    this.setState({upgradedView:!this.state.upgradedView},()=>{
+    const {upgradedView} = this.state;
+    this.setState({upgradedView:!upgradedView},()=>{
       this.refreshCarousel();
     })
   }
@@ -329,8 +463,8 @@ class Dashboard extends Component {
     const {vendingCols,vendingRows} = this.state;
     const d2 =this.empty2dArray(vendingRows,vendingCols);
     this.setState({productsInVending:d2});
+    this.setState({suggestionView:false});
     this.setState({generalCharts:[]});
-    sessionStorage.clear("savedVending");
   }
 
   maintainVending = () =>{
@@ -339,12 +473,18 @@ class Dashboard extends Component {
     this.removeUpgrade();
   }
 
+  showRecomendations = () =>{
+    const {showRecom} = this.state;
+    this.setState({showRecom:!showRecom});
+  }
+
   hoverObjectChange = (hoverObject) =>{
     this.setState({hoverObject});
     this.calculateIndividualCharts(hoverObject);
   }
 
   clickObjectChange = (clickObject)=>{
+    //alert(JSON.stringify(clickObject));
     const selected = this.state.selectedProduct;
     if(selected == clickObject){
       this.setState({selectedProduct:{}}, () => {
@@ -358,7 +498,7 @@ class Dashboard extends Component {
   }
 
   moveProductVending = (row,col) =>{
-    const {selectedProduct,upgradedView} = this.state;
+    const {selectedProduct,suggestionView} = this.state;
     let productsInVending = this.state.productsInVending;
     if(selectedProduct != {}){
       productsInVending[row][col] = selectedProduct;
@@ -369,7 +509,7 @@ class Dashboard extends Component {
     }, () => {
         this.refreshCarousel();
     });
-    if(!upgradedView)
+    if(!suggestionView)
       sessionStorage.setItem("savedVending",JSON.stringify(productsInVending));
     
       this.calculateGeneralCharts(productsInVending);
@@ -422,11 +562,11 @@ class Dashboard extends Component {
       y.map((x,k)=> {
         //console.log(JSON.stringify(x));
         if(Object.keys(x).length>0){
-          totalCapConfig+=x.vm_forecast_dash_capacidad_configurada;
-          totalVendido+=x.vm_forecast_dash_vendido;
-          const preciopieza = x.vm_forecast_dash_vendido == 0 ? 0 : x.vm_forecast_dash_val_vendido/x.vm_forecast_dash_vendido;
+          totalCapConfig+=x.vm_forecast_dash_CAPACIDAD_CONFIGURADA;
+          totalVendido+=x.vm_forecast_dash_VENDIDO;
+          const preciopieza = x.vm_forecast_dash_VENDIDO == 0 ? 0 : x.vm_forecast_dash_VAL_VENDIDO/x.vm_forecast_dash_VENDIDO;
           totalDineroPosible+= preciopieza*totalCapConfig;
-          totalDineroVendido+=x.vm_forecast_dash_val_vendido;
+          totalDineroVendido+=x.vm_forecast_dash_VAL_VENDIDO;
         }
       });
     });
@@ -438,41 +578,42 @@ class Dashboard extends Component {
           ["Vendido", totalVendido],
           ["En máquina", totalCapConfig-totalVendido]
         ],
-        size:130
+        size:100
       });
     }
     if(totalDineroVendido>0 && totalDineroPosible-totalDineroVendido > 0){
       charts.push({
-        title:"Compras",
+        title:"Ventas",
         axis:[
           ["Vendido", "Por vender"],
           ["Vendido", totalDineroVendido],
           ["Por vender", totalDineroPosible-totalDineroVendido]
         ],
-        size:130
+        size:100
       });
     }
 
     this.setState({generalCharts:charts});
   }
-
+  sortRowData=(data) => {
+    return data.sort((a, b) => a.vm_forecast_dash_row_num - b.vm_forecast_dash_row_num);
+  }
   sortForecastData=(data) => {
     const sortOrder = { "UP": 1, "-": 2, "DOWN": 3 }; // Establece el orden de clasificación
     return data.sort((a, b) => {
         return sortOrder[a.vm_forecast_dash_obs_cliente] - sortOrder[b.vm_forecast_dash_obs_cliente];
     });
-    
-}
+  }
 calculateIndividualCharts=(product)=>{
   let charts=[];
   
   let totalVendido=0, totalCapConfig = 0,totalDineroVendido=0, totalDineroPosible = 0;
   
-  totalCapConfig=product.vm_forecast_dash_capacidad_configurada;
-  totalVendido=product.vm_forecast_dash_vendido;
-  const preciopieza = product.vm_forecast_dash_vendido == 0 ? 0 : product.vm_forecast_dash_val_vendido/product.vm_forecast_dash_vendido;
+  totalCapConfig=product.vm_forecast_dash_CAPACIDAD_CONFIGURADA;
+  totalVendido=product.vm_forecast_dash_VENDIDO;
+  const preciopieza = product.vm_forecast_dash_VENDIDO == 0 ? 0 : product.vm_forecast_dash_VAL_VENDIDO/product.vm_forecast_dash_VENDIDO;
   totalDineroPosible = preciopieza*totalCapConfig;
-  totalDineroVendido =product.vm_forecast_dash_val_vendido;
+  totalDineroVendido =product.vm_forecast_dash_VAL_VENDIDO;
 
   charts.push({
     title:"Capacidad",
@@ -484,7 +625,7 @@ calculateIndividualCharts=(product)=>{
     size:100
   });
   charts.push({
-    title:"Compras",
+    title:"Ventas",
     axis:[
       ["Vendido", "Por vender"],
       ["Vendido", totalDineroVendido],
@@ -520,7 +661,7 @@ calculateIndividualCharts=(product)=>{
   }
 
   getProducts() {
-    const {upgradedView,searchArca, typeProduct, query, productsData} = this.state;
+    const {upgradedView, searchArca, typeProduct, query, productsData} = this.state;
     const itemsPerRow=12;
 
     let filteredData = [];
@@ -530,18 +671,21 @@ calculateIndividualCharts=(product)=>{
       var applies = false;
       var typi = "";
       for (var i = 0; i < typeProduct.length; i++) {
-        if (x.vm_forecast_dash_type.toUpperCase().includes(typeProduct[i].toUpperCase()) || x.vm_forecast_dash_type=="") {
+        
+        
+        if (x.cp_tipo.toUpperCase().includes(typeProduct[i].toUpperCase()) || x.cp_tipo=="") {
           applies = true;
           typi = typeProduct[i];
           break;
         }
       }
-      if(query != "" && !x.vm_forecast_dash_producto.toUpperCase().includes(query.toUpperCase())){
+      if(query != "" && !x.vm_forecast_dash_PRODUCTO.toUpperCase().includes(query.toUpperCase())){
         applies=false;
       }
-      if(applies && ((x.vm_forecast_dash_arca=="true" && searchArca) || !searchArca )){
+      if(applies && ((x.cp_arca=="true" && searchArca) || !searchArca )){
         filteredData.push(x);
-        //console.log(x.vm_forecast_dash_producto,"vs",query," --- tipo:",x.vm_forecast_dash_type,"vs",typi," --- arca:",x.vm_forecast_dash_arca);
+        //console.log(x.vm_forecast_dash_PRODUCTO,"vs",query," --- tipo:",x.cp_tipo,"vs",typi," --- arca:",x.cp_arca);
+      
       }
     })
     const len= filteredData.length;
@@ -552,21 +696,23 @@ calculateIndividualCharts=(product)=>{
     let cont = 0;
     
     //console.log("Productos:",filteredData.length," --- Paginas:",pages)
-
     pagesArray.map((page,k)=>{
-      insides.push( <Row className="carouselPage" key={k}>
-        {filteredData.map((product, k2) => {
-          if(k2<cont || k2>cont+(itemsPerRow-1)) return;
-          
-          return(
-          <Col key={k2} xs="12" sm="6" md="4" lg="3" xl="2">
-            <Product data={product} isUpgradedView={upgradedView} hoverObj={this.hoverObjectChange} clickObj={this.clickObjectChange} isSelected={product==this.state.selectedProduct}/>
-          </Col>
-          )
-        })
-      }</Row>)
-      cont+=5;
+      insides.push( 
+        <Row className="carouselPage" key={k}>
+          {filteredData.map((product, k2) => {
+            if(k2<cont || k2>cont+(itemsPerRow-1)) return;
+            
+            return(
+            <Col key={k2} xs="12" sm="6" md="4" lg="3" xl="2">
+              <Product data={product} upgradedView={upgradedView} classUpg={upgradedView ? product.vm_forecast_dash_obs_cliente+"-upg ":""} hoverObj={this.hoverObjectChange} clickObj={this.clickObjectChange} isSelected={product==this.state.selectedProduct}/>
+            </Col>
+            )
+          })
+        }</Row>
+      )
+      cont+=12;
     }) 
+
     this.setState({filteredData,queryProducts:insides, search:false});
     return insides;
   }
@@ -587,7 +733,7 @@ calculateIndividualCharts=(product)=>{
       return src;
   }
 
-  upgradeAll = () =>{
+  upgradeAll = (onlyState) =>{
     const {productsData,vendingRows,vendingCols} = this.state;
     let cleanedData = [];
     cleanedData=this.sortForecastData(productsData);
@@ -609,6 +755,46 @@ calculateIndividualCharts=(product)=>{
         });
       });
     });
+    if(onlyState){
+      this.setState({upgradedVending:productsInVending});
+      return;
+    }
+    this.setState({
+      productsInVending,
+      suggestionView:true
+    }, () => {
+      this.refreshCarousel();
+    });
+    
+    this.calculateGeneralCharts(productsInVending);
+  }
+
+  upgradeAll = (onlyState) =>{
+    const {productsData,vendingRows,vendingCols} = this.state;
+    let cleanedData = [];
+    cleanedData=this.sortForecastData(productsData);
+    let productsInVending = this.empty2dArray(vendingRows,vendingCols);
+    //debugger;
+    //console.log(JSON.stringify(productsInVending));
+    cleanedData.map((data,i)=>{
+      let added = false;
+      productsInVending.map((y,j)=> {
+        //console.log("row:"+y);
+        if(added) return;
+        y.map((x,k)=> {
+          //console.log("col:"+x);
+          if(added)return;
+          if(Object.keys(x).length==0){
+            added=true;
+            productsInVending[j][k]=data;
+          }
+        });
+      });
+    });
+    if(onlyState){
+      this.setState({upgradedVending:productsInVending});
+      return;
+    }
     this.setState({
       productsInVending,
       suggestionView:true
@@ -624,9 +810,6 @@ calculateIndividualCharts=(product)=>{
     let prod = [];
     if(sessionStorage.getItem("savedVending")){
       prod = JSON.parse(sessionStorage.getItem("savedVending"));
-    }else{
-      prod = this.empty2dArray(vendingRows,vendingCols);
-      sessionStorage.setItem("savedVending",JSON.stringify(prod));
     }
     
     this.setState({

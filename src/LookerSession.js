@@ -105,12 +105,12 @@ export async function redeem_auth_code(response_str) {
   
 }
 
-export async function get_slug(tkn) {
+export async function get_slug(tkn,query) {
 
   const base_url = LOOKER_WEB+"api/4.0/sql_queries";
   const params = {
     "connection_name": "arca-vm-poc",
-    "sql": SLUG_QUERY,
+    "sql": query,
     "vis_config": {}
   }
   const response = await

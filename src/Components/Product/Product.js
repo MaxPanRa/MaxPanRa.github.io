@@ -1,12 +1,7 @@
-import React, { Component, Fragment } from "react";
+import React, { Component } from "react";
 
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import Figure from 'react-bootstrap/Figure'
-import FigureImage from 'react-bootstrap/FigureImage'
-
-import axios from 'axios';
 
 const regexWater = /[0-9]*(([Mm]+[lL]+)+|([Mm]+[Nn]+[Rr]+)+|([Oo]+[Zz]+))/;
 const regexBag = /[0-9]*(([Gg]+\s+)+|([Gg]+[Rr]+)+|([Gg]$))/;
@@ -16,10 +11,11 @@ class Product extends Component {
     constructor(props){
       super(props);
       this.state ={
+           classUpg:"",
            data: null, 
            imageSrc:"",
            arcaSrc:"",
-           isUpgradedView:false,
+           upgradedView:false,
            isSelected:false,
            hoverObj:()=>{},
            clickObj:()=>{},
@@ -29,52 +25,56 @@ class Product extends Component {
     componentWillMount(){
         const data = this.props.data;
         this.setState({
-            isUpgradedView:this.props.isUpgradedView,
+            upgradedView:this.props.upgradedView,
             isSelected:this.props.isSelected,
+            classUpg: this.props.classUpg,
             data: this.props.data
         })
     }
     componentDidMount(){
         const {data} = this.state;
-        this.checkImageRegex(data.vm_forecast_dash_type);
+        this.checkImageRegex(data.cp_tipo);
         this.setState({arcaSrc:"/Images/ARCAIcon.png"});
         this.setState({
-            isUpgradedView:this.props.isUpgradedView,
+            upgradedView:this.props.upgradedView,
             isSelected:this.props.isSelected,
+            classUpg: this.props.classUpg,
             data: this.props.data
         })
     }
 
     componentDidUpdate(prevProps){
-        if (this.props.isUpgradedView !== prevProps.isUpgradedView) {
-            this.setState({ isUpgradedView: this.props.isUpgradedView });
+        if (this.props.upgradedView !== prevProps.upgradedView) {
+            this.setState({ upgradedView: this.props.upgradedView });
+        }
+        if (this.props.classUpg !== prevProps.classUpg) {
+            this.setState({ classUpg: this.props.classUpg });
         }
         if (this.props.isSelected !== prevProps.isSelected) {
             this.setState({ isSelected: this.props.isSelected });
         }
         if (this.props.data !== prevProps.data) {
             this.setState({ data: this.props.data });
-            this.checkImageRegex(this.props.data.vm_forecast_dash_type);
+            this.checkImageRegex(this.props.data.cp_tipo);
         }
     }
 
     render(){
         //console.log(data);
-        let {data,imageSrc,arcaSrc, isUpgradedView, isSelected}=this.state;
-        const upgClass = isUpgradedView ? data.vm_forecast_dash_obs_cliente+"-upg ":"";
+        let {data,imageSrc,arcaSrc, isSelected, classUpg}=this.state;
         return (
-            <Container className={isSelected ? upgClass+"prod-block selected":upgClass+"prod-block"} onMouseEnter={()=>{this.props.hoverObj(data)}} onMouseUp={()=>{this.props.clickObj(data)}}>
-                <Row className="prod-block-qty-row">
-                    <span className="prod-block-qty">QTY: {data.vm_forecast_dash_capacidad_configurada}</span>
+            <Container className={isSelected ? classUpg+"prod-block selected":classUpg+"prod-block"} onMouseEnter={()=>{this.props.hoverObj(data)}} onMouseUp={()=>{this.props.clickObj(data)}}>
+                <Row className="prod-block-qty-row" >
+                    <span className="prod-block-qty">QTY: {data.vm_forecast_dash_CAPACIDAD_CONFIGURADA}</span>
                 </Row>
                 <Row className="prod-block-div-row">
                     <div className="prod-block-div">
-                        <img src={imageSrc} alt={data.vm_forecast_dash_producto}/>
-                        {data.vm_forecast_dash_arca=="true"?<img src={arcaSrc} alt={data.vm_forecast_dash_producto} className="arca-Icon"/>:""}
+                        <img src={imageSrc} alt={data.vm_forecast_dash_PRODUCTO}/>
+                        {data.cp_arca=="true"?<img src={arcaSrc} alt={data.vm_forecast_dash_PRODUCTO} className="arca-Icon"/>:""}
                     </div>
                 </Row>
                 <Row className="prod-block-title-row">
-                    <span className="prod-block-title">{data.vm_forecast_dash_producto}</span>
+                    <span className="prod-block-title">{data.vm_forecast_dash_PRODUCTO}</span>
                 </Row>
                 
             </Container>
