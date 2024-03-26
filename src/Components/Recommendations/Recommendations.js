@@ -28,7 +28,8 @@ class Recommendations extends Component {
             dataBefore:this.props.dataBefore,
             dataAfter:this.props.dataAfter,
             show: this.props.show,
-            tkn:this.props.tkn
+            tkn:this.props.tkn,
+            loading:false,
         },()=>{
             this.searchRecommendations(this.state.dataBefore);
         })
@@ -54,12 +55,12 @@ class Recommendations extends Component {
 
     render(){
         //console.log(data);
-        const {dataBefore,dataAfter,show, recommended}=this.state;
+        const {dataBefore,dataAfter,show, recommended, loading}=this.state;
         return (
             <Container className={show ? "recom-show blackdrop":"recom-hide blackdrop"}>
                 <Container className="recom-white">
                     <Row className="recom-title">
-                        <h2 className="recom-title-gral">Sugerencias</h2>
+                        {loading?<h2 className="recom-title-gral">Cargando Sugerencias...</h2>:<h2 className="recom-title-gral">Sugerencias</h2>}
                     </Row>
                     <Row className="prod-block-div-row-1">
                         <Col>
@@ -87,7 +88,7 @@ class Recommendations extends Component {
         let html = [];
         let tk = this.state.tkn;
         
-        subData.map(async (productRow,j)=>{
+        await subData.map(async (productRow,j)=>{
             productRow.map(async(product,k)=>{
                 if(Object.keys(product).length==0) return;
                 var newProd = product;
@@ -96,13 +97,13 @@ class Recommendations extends Component {
                     try {
                         const slug = await get_slug(tk,QUERY_RECOMMENDATIONS(newProd));
                         try{
-                            if(newProd.vm_forecast_dash_obs_cliente != "UP"){
-                                suggestions = await get_all_data(slug,tk); //LOOKER JSONS
-                            }
+                            suggestions = await get_all_data(slug,tk); //LOOKER JSONS
                         }catch(e){
                             console.error("No se pudo obtener el resultado del query:", e);
                         }finally{
                             console.log("for",newProd.cp_PRODUCTO,"Suggestions:",suggestions);
+                            if(newProd.vm_forecast_dash_obs_cliente != "UP") 
+                                suggestions=[];
                             newProd.suggestions = suggestions;
                             newProd.x=j+1;
                             newProd.y=k+1;

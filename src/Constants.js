@@ -11,7 +11,7 @@ export const QUERY_MACHINE_PRODUCTS = (pdv) =>{
     return "SELECT * FROM [arca-vm-analytics:poc_vm_data.vm_forecast_dash] AS vm_forecast_dash JOIN cat_productos AS cp ON vm_forecast_dash.PRODUCTOID = cp.PRODUCTOID where PDV='"+pdv+"';";
 }
 export const QUERY_RECOMMENDATIONS= (p)=>{
-    return `SELECT f.PRODUCTOID, p.PRODUCTO, p.tipo, MAX(f.forecast_value) AS max_forecast_value FROM [arca-vm-analytics.poc_vm_data.vm_forecast_c] AS f JOIN [arca-vm-analytics.poc_vm_data.cat_productos] AS p on f.PRODUCTOID = p.PRODUCTOID WHERE tipo="${p.vm_forecast_dash_PRODUCTO}" AND CLIENTE='${p.vm_forecast_dash_CLIENTE}' GROUP BY f.PRODUCTOID, p.PRODUCTO, p.tipo, ORDER BY max_forecast_value DESC LIMIT 5`
+    return `SELECT f.PRODUCTOID, p.PRODUCTO, p.tipo, MAX(f.forecast_value) AS max_forecast_value FROM [arca-vm-analytics.poc_vm_data.vm_forecast_c] AS f JOIN [arca-vm-analytics.poc_vm_data.cat_productos] AS p on f.PRODUCTOID = p.PRODUCTOID WHERE tipo="${p.cp_tipo}" AND CLIENTE='${p.vm_forecast_dash_CLIENTE}' GROUP BY f.PRODUCTOID, p.PRODUCTO, p.tipo, ORDER BY max_forecast_value DESC LIMIT 5`
 }
 
 export const ALLFILTERS=["bebida","botana","panaderia","dulceria"]
