@@ -78,7 +78,7 @@ class Dashboard extends Component {
 
     if(Date.now() > lastTkn+3500){
       const response = await oauth_login();
-      let tk = response.access_token;
+      let tk = response?.access_token;
       this.setState({tkn:tk,lastTkn:Date.now()});
       return tk;
     }else{
