@@ -126,6 +126,7 @@ class Dashboard extends Component {
       const slug = await get_slug(tk,QUERY_PDVS);
       try{
         pdvs = await get_all_data(slug,tk); //LOOKER JSONS
+        this.setState({tkn:tk,lastTkn:Date.now()});
       }catch(e){
         console.error("No se pudo obtener el resultado del query:", e);
         pdvs=pdvsJson;  //LOCAL JSONS
