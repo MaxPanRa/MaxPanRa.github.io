@@ -69,7 +69,7 @@ class Recommendations extends Component {
                             <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
                             <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
                                 {x.suggestions.map((y,l)=>
-                                    <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{y.vm_forecast_dash_PRODUCTO}</span>
+                                    <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{y.p_PRODUCTO+" - FORECAST: "+y.max_forecast_value}</span>
                                 )}
                             </div>
                             )}
@@ -87,7 +87,7 @@ class Recommendations extends Component {
     searchRecommendations = async (subData) => {
         let html = [];
         let tk = this.state.tkn;
-        
+        this.setState({loading:true});
         await subData.map(async (productRow,j)=>{
             productRow.map(async(product,k)=>{
                 if(Object.keys(product).length==0) return;
@@ -102,8 +102,6 @@ class Recommendations extends Component {
                             console.error("No se pudo obtener el resultado del query:", e);
                         }finally{
                             console.log("for",newProd.cp_PRODUCTO,"Suggestions:",suggestions);
-                            if(newProd.vm_forecast_dash_obs_cliente != "UP") 
-                                suggestions=[];
                             newProd.suggestions = suggestions;
                             newProd.x=j+1;
                             newProd.y=k+1;
@@ -115,7 +113,9 @@ class Recommendations extends Component {
                 
             }) 
         })
+        html = html.sort((a,b)=>a-b);
         this.setState({recommended:html});
+        this.setState({loading:true});
         return html;
     }
 
