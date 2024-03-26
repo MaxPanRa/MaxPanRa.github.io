@@ -78,7 +78,7 @@ class Dashboard extends Component {
 
     if(Date.now() > lastTkn+(3500000)){
       const response = await oauth_login();
-      if(response?.access_token == undefined && tkn!=undefined){
+      if(response?.access_token == undefined && tkn!="" && tkn!=undefined){
         return tkn;
       }
       let tk = response?.access_token;
