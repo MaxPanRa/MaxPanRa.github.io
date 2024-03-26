@@ -101,6 +101,22 @@ class Dashboard extends Component {
     //console.log(this.empty2dArray(vendingRows,vendingCols));
     this.setState({vendingEmpty:this.empty2dArray(vendingRows,vendingCols)});
     this.setState({productsInVending:this.empty2dArray(vendingRows,vendingCols)});
+    
+  }
+
+  empty2dArray(x,y){
+    let twoDArray = [];
+    for (let i = 0; i < x; i++) {
+      let secondArray=[];
+      for (let j = 0; j < y; j++) {
+        secondArray.push({});
+      }
+      twoDArray.push(secondArray);
+    }
+    return twoDArray;
+  }
+
+  componentDidMount= async ()=>{
     let pdvs = [];
     serviceCall:try {
       let tk = await this.refreshToken();
@@ -120,21 +136,6 @@ class Dashboard extends Component {
       console.error("No se pudo obtener el Token:", error);
     }
     this.setState({pdvs})
-  }
-
-  empty2dArray(x,y){
-    let twoDArray = [];
-    for (let i = 0; i < x; i++) {
-      let secondArray=[];
-      for (let j = 0; j < y; j++) {
-        secondArray.push({});
-      }
-      twoDArray.push(secondArray);
-    }
-    return twoDArray;
-  }
-
-  componentDidMount= async ()=>{
     //let jsonData = this.state.jsonData;
     /*
     this.setState({jsonData},()=>{
