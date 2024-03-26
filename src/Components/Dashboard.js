@@ -83,6 +83,7 @@ class Dashboard extends Component {
       }
       let tk = response?.access_token;
       this.setState({tkn:tk,lastTkn:Date.now()});
+      
       return tk;
     }else{
       return tkn;
@@ -151,7 +152,6 @@ class Dashboard extends Component {
     })
     */
     //this.setState({jsonData});
-    window.history.replaceState(null, '', window.location.pathname);
   }
 
   render() {
