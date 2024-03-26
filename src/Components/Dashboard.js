@@ -78,10 +78,14 @@ class Dashboard extends Component {
 
     if(Date.now() > lastTkn+(3500000)){
       const response = await oauth_login();
-      if(response?.access_token == undefined && tkn!="" && tkn!=undefined){
+      /*if(response?.access_token == undefined && tkn!="" && tkn!=undefined){
         return tkn;
+      }*/
+      if(response.access_token == undefined){
+        console.log("ITS UNDEFINED!!!");
+        tk = "";
       }
-      let tk = response?.access_token;
+      let tk = response.access_token;
       this.setState({tkn:tk,lastTkn:Date.now()});
       
       return tk;

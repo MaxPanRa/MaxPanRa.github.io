@@ -101,6 +101,7 @@ export async function redeem_auth_code(response_str) {
   console.log(`Access token expires at ${expires_at.toLocaleTimeString()} local time.`)
   sessionStorage.setItem('access_info', JSON.stringify(info))
   console.log(sessionStorage.getItem('access_info'));
+  window.history.replaceState(null, '', window.location.pathname);
   return info;
   
 }
