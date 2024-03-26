@@ -127,6 +127,7 @@ class Dashboard extends Component {
       try{
         pdvs = await get_all_data(slug,tk); //LOOKER JSONS
         this.setState({tkn:tk,lastTkn:Date.now()});
+        window.history.replaceState(null, '', window.location.pathname);
       }catch(e){
         console.error("No se pudo obtener el resultado del query:", e);
         pdvs=pdvsJson;  //LOCAL JSONS
@@ -193,6 +194,10 @@ class Dashboard extends Component {
                       <Row key={j} className="vending-line" style={{"minHeight":"50px","height":""+100/vendR.length+"%"}}>
                         {vendC.map((col,k)=>{
                           let upgClass= upgradedView ? productsInVending[j][k].vm_forecast_dash_obs_cliente+"-upg ":"";
+                          if(selectedPDV==""){
+                            return(<Col onClick={()=>{this.moveProductVending(j,k)}} key={k} className={Object.keys(productsInVending[j][k]).length > 0 ? upgClass+"vending-prod filled-vend":upgClass+"vending-prod"} 
+                            style={{"maxWidth":"80px","maxHeight":"100px","width":""+100/vendC.length+"%"}}><Tooltip title="Vacío" className="btn-vend-empty"><div style={{height:"100%",width:"100%"}}> </div></Tooltip></Col>)
+                          }
                           return (
                             <Col onClick={()=>{this.moveProductVending(j,k)}} key={k} className={Object.keys(productsInVending[j][k]).length > 0 ? upgClass+"vending-prod filled-vend":upgClass+"vending-prod"} 
                               style={{"maxWidth":"80px","maxHeight":"100px","width":""+100/vendC.length+"%"}}>{
@@ -215,39 +220,7 @@ class Dashboard extends Component {
                     </Col>
                   </Row>
                 </Row>
-                <Row className="vending-row-btns" style={{display:"none"}}>
-                  <div className="vm-btns-sqr vm-btns"></div>
-                  <div className="vm-btns-sqr-long vm-btns">
-                    <div className="vm-btns-sqr-1 vm-btns">
-                      <div className="vm-btns-sqr-2 vm-btns"></div>
-                      <div className="vm-btns-sqr-3 vm-btns"></div>
-                      <div className="vm-btns-sqr-4 vm-btns"></div>
-                    </div>
-                    <div className="vm-btns-double-1 vm-btns">
-                      <div className="vm-btns-sqr-dbl-1 vm-btns "></div>
-                      <div className="vm-btns-sqr-dbl-2 vm-btns"></div>
-                    </div>
-                    <div className="vm-btns-double-1 vm-btns">
-                      <div className="vm-btns-sqr-dbl-1 vm-btns"></div>
-                      <div className="vm-btns-sqr-dbl-2 vm-btns"></div>
-                    </div>
-                    <div className="vm-btns-double-1 vm-btns">
-                      <div className="vm-btns-sqr-dbl-1 vm-btns"></div>
-                      <div className="vm-btns-sqr-dbl-2 vm-btns"></div>
-                    </div>
-                    <div className="vm-btns-sqr-5 vm-btns"></div>
-                    <div className="vm-btns-sqr-6 vm-btns">
-                      <div className="vm-btns-sqr-7 vm-btns"></div>
-                    </div>
-                    <div className="vm-btns-sqr-8 vm-btns">
-                      <div className="vm-btns-sqr-9 vm-btns"></div>
-                    </div>
-                    <div className="vm-btns-sqr-10">
-                      <div className="vm-btns-sqr-11"></div>
-                    </div>
-                    <div className="vm-btns-sqr-12"></div>
-                  </div>
-                </Row>
+                
               </Col>
               <Col sm={3} id="vending-charts">
                 <Row className="vending-row">
@@ -310,7 +283,7 @@ class Dashboard extends Component {
                       </Row>
                     }
                   </Row>
-                {generalCharts.length==0 ?"":
+                {selectedPDV=="" || generalCharts.length==0 ?"":
                   generalCharts.map((data,k)=>
                   <Col key={k} sm={12} className="chartBox">
                     <BinaryPieChart title={data.title} data={data.axis} options={PieChartOPTIONS} size={data.size+"px"} isMoney={data.title.toUpperCase().includes("VENTA")}/>
@@ -330,7 +303,7 @@ class Dashboard extends Component {
                   <Col sm={12} md={10} id="carousel-box">
                     <Row className="gray-box">
                       {selectedPDV!=""?<h1>SOCVI</h1>:""}
-                      {queryProducts.length == 0 ? "":
+                      {selectedPDV== "" || queryProducts.length == 0 ? "":
                       <Carousel touchMove={true} arrows afterChange={this.onChange} dots={true} dotWidth={20} prevArrow={<LeftSquareOutlined />} nextArrow={<RightSquareOutlined />} >
                         {queryProducts.map((x)=>x)}
                         </Carousel>
@@ -391,12 +364,8 @@ class Dashboard extends Component {
     const {vendingCols,vendingRows} = this.state;
     this.setState({selectedPDV:value});
     let products = []; //query to get Products
-    serviceCall:try {
-      let tk = await this.refreshToken();
-      if(tk==undefined){
-        products=data;
-        break serviceCall;
-      }
+    try {
+      let tk = this.state.tkn;
       const slug = await get_slug(tk,QUERY_MACHINE_PRODUCTS(value));
       try{
         products = await get_all_data(slug,tk); //LOOKER JSONS

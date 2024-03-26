@@ -84,33 +84,34 @@ class Recommendations extends Component {
     }
 
     searchRecommendations = async (subData) => {
-        const {allData} = this.state;
-        
         let html = [];
         let tk = this.state.tkn;
         
-        subData.map((productRow,j)=>{
+        subData.map(async (productRow,j)=>{
             productRow.map(async(product,k)=>{
                 if(Object.keys(product).length==0) return;
-                let newProd = product;
-                //console.log(product)
-                let suggestions = [];
-                if(product.vm_forecast_dash_obs_cliente != "UP"){
+                var newProd = product;
+                var suggestions = [];
+                //console.log(product);
                     try {
-                        const slug = await get_slug(tk,QUERY_RECOMMENDATIONS(product));
+                        const slug = await get_slug(tk,QUERY_RECOMMENDATIONS(newProd));
                         try{
-                            suggestions = await get_all_data(slug,tk); //LOOKER JSONS
+                            if(newProd.vm_forecast_dash_obs_cliente != "UP"){
+                                suggestions = await get_all_data(slug,tk); //LOOKER JSONS
+                            }
                         }catch(e){
                             console.error("No se pudo obtener el resultado del query:", e);
+                        }finally{
+                            console.log("for",newProd.cp_PRODUCTO,"Suggestions:",suggestions);
+                            newProd.suggestions = suggestions;
+                            newProd.x=j+1;
+                            newProd.y=k+1;
+                            html.push(newProd);
                         }
                     } catch (error) {
                         console.error("No se pudo obtener el Token:", error);
                     }
-                }
-                newProd.suggestions = suggestions;
-                newProd.x=j+1;
-                newProd.y=k+1;
-                html.push(newProd);
+                
             }) 
         })
         this.setState({recommended:html});

@@ -1047,6 +1047,7 @@ span.btn-vend-ROW {
   border-radius: 0 0 30px 30px;
   border-bottom: 1px solid black;
   transition:0.5s;
+  margin-top: -2px;
 }
 
 .vending-prod.col:hover span.btn-vend-ROW{ 
