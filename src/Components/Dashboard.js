@@ -76,8 +76,11 @@ class Dashboard extends Component {
     const lastTkn = this.state.lastTkn;
     const tkn = this.state.tkn;
 
-    if(Date.now() > lastTkn+3500){
+    if(Date.now() > lastTkn+(3500000)){
       const response = await oauth_login();
+      if(response?.access_token == undefined && tkn!=undefined){
+        return tkn;
+      }
       let tk = response?.access_token;
       this.setState({tkn:tk,lastTkn:Date.now()});
       return tk;
@@ -436,7 +439,7 @@ class Dashboard extends Component {
       pdvVending:productsInVending,
       lastPDVDate:lastDate
     },()=>{
-      console.log(this.state.pdvVending,this.state.productsInVending,this.state.pdvVending==this.state.productsInVending)
+      //console.log(this.state.pdvVending,this.state.productsInVending,this.state.pdvVending==this.state.productsInVending)
       this.maintainVending()
     });
     

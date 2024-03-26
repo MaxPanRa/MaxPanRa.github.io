@@ -123,11 +123,13 @@ class Recommendations extends Component {
         const lastTkn = this.state.lastTkn;
         const tkn = this.state.tkn;
     
-        if(Date.now() > lastTkn+3500){
+        if(Date.now() > lastTkn+(3500000)){
           const response = await oauth_login();
-          let tk = response.access_token;
+          if(response?.access_token == undefined && tkn!=undefined){
+            return tkn;
+          }
+          let tk = response?.access_token;
           this.setState({tkn:tk,lastTkn:Date.now()});
-          window.history.replaceState(null, '', window.location.pathname);
           return tk;
         }else{
           return tkn;
