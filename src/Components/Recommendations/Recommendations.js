@@ -94,32 +94,19 @@ class Recommendations extends Component {
 
         const doc = new jsPDF({
 			format: 'letter',
-			unit: 'px',
 		});
         doc.setFont('Inter-Regular', 'normal');
         doc.setTextColor("black");
         doc.setFontSize(18);
 
         let htmlElem = (
-            <Container className="recom-white" style={{width:"100%"}}>
-                <Row className="recom-title" style={{width:"100%"}}>
-                <h2 className="recom-title-gral" style={{width:"100%"}}>Sugerencias</h2>
-                </Row>
-                <Row className="prod-block-div-row-1" style={{width:"100%"}}>
-                    <Col>
-                    <Container className="aftrem">
-                        {recommended.map((x,k)=>
-                        <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
-                        <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
-                            {x.suggestions.map((y,l)=>
-                                <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por: "+y.p_PRODUCTO}</span>
-                            )}
-                        </div>
-                        )}
-                        </Container>
-                    </Col>
-                </Row>
-            </Container>
+            recommended.map((x,k)=>
+            <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO+ " Producto #"+x.vm_forecast_dash_row_num}
+                {x.suggestions.map((y,l)=>
+                    <span key={l} className="suggestion" >{"Cambiar por: "+y.p_PRODUCTO}</span>
+                )}
+            </div>
+            )
         )
 
         htmlElem = renderToStaticMarkup(htmlElem);
