@@ -94,16 +94,18 @@ class Recommendations extends Component {
 
         const doc = new jsPDF({
 			format: 'letter',
+            precision:2,
+            orientation: 'p',
+            unit: 'mm',
 		});
-        doc.setFont('Inter-Regular', 'normal');
         doc.setTextColor("black");
         doc.setFontSize(10);
 
         let htmlElem = (
             recommended.map((x,k)=>
-            <div style={{fontSize:"16px"}} className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO+ " Producto #"+x.vm_forecast_dash_row_num}
+            <div style={{fontSize:"10px"}} className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO+ " Producto #"+x.vm_forecast_dash_row_num}
                 {x.suggestions.map((y,l)=>
-                    <span style={{fontSize:"13px"}} key={l} className="suggestion" >{"Cambiar por: "+y.p_PRODUCTO}</span>
+                    <span style={{fontSize:"10px"}} key={l} className="suggestion" >{"Cambiar por: "+y.p_PRODUCTO}</span>
                 )}
             </div>
             )
