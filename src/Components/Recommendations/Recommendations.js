@@ -96,7 +96,7 @@ class Recommendations extends Component {
 			format: 'letter',
             precision:2,
             orientation: 'p',
-            unit: 'cm',
+            unit: 'px',
             putOnlyUsedFonts: true,
 		});
         doc.setTextColor("black");
