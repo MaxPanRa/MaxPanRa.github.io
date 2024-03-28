@@ -179,9 +179,9 @@ class Dashboard extends Component {
             <Row className="vender-title-pdv" style={{height:"5%"}}>
               <div className="title-vender"><h1>{"Cliente: "+selectedClient}</h1></div>
               {selectedPDV==""?"":
-              <div className="title-vender title-vender-pdv"><h1>{"-> Punto de Venta:"+selectedPDV}</h1></div>}
+              <div className="title-vender title-vender-pdv"><h1>{"-> Punto de Venta: "+selectedPDV}</h1></div>}
               {lastPDVDate==""?"":
-              <div className="title-vender title-vender-date"><h1>{" -  Última Visita: "+this.formatDate(lastPDVDate)}</h1></div>}
+              <div className="title-vender title-vender-date"><h1>{"-  Última Visita: "+this.formatDate(lastPDVDate)}</h1></div>}
             </Row>
           }
             <Row id="vending-wrap" style={{height:"50%"}}>

@@ -82,7 +82,7 @@ class Recommendations extends Component {
                         <Button className="btn-closeModal" type="primary" shape="default" icon={<CloseOutlined />} onClick={()=>{this.props.changeShow()}} >Volver</Button>
                     </Row>
                     <Row>
-                        <Button className="btn-generatePDF" type="dashed" shape="default" icon={<EyeFilled />} onClick={()=>{this.generatePDF()}} >Generar PDF</Button>
+                        <Button className="btn-generatePDF" disabled={loading} type="dashed" shape="default" icon={<EyeFilled />} onClick={()=>{this.generatePDF()}} >Generar PDF</Button>
                     </Row>
                 </Container>
             </Container>
@@ -93,22 +93,34 @@ class Recommendations extends Component {
         const {recommended} = this.state;
 
         const doc = new jsPDF({
-			format: 'a4',
+			format: 'letter',
 			unit: 'px',
 		});
+        doc.setFont('Inter-Regular', 'normal');
+        doc.setFontSize(18);
 
         let htmlElem = (
-        <Container className="aftrem">
-        {recommended.map((x,k)=>
-        <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
-        <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
-            {x.suggestions.map((y,l)=>
-                <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por:"+y.p_PRODUCTO}</span>
-            )}
-        </div>
-        )}
-        </Container>
+            <Container className="recom-white">
+                <Row className="recom-title">
+                <h2 className="recom-title-gral">Sugerencias</h2>
+                </Row>
+                <Row className="prod-block-div-row-1">
+                    <Col>
+                    <Container className="aftrem">
+                        {recommended.map((x,k)=>
+                        <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
+                        <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
+                            {x.suggestions.map((y,l)=>
+                                <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por:"+y.p_PRODUCTO}</span>
+                            )}
+                        </div>
+                        )}
+                        </Container>
+                    </Col>
+                </Row>
+            </Container>
         )
+
         htmlElem = renderToStaticMarkup(htmlElem);
         doc.html(htmlElem, {
 			async callback(doc) {
