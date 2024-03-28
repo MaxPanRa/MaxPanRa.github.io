@@ -97,14 +97,15 @@ class Recommendations extends Component {
             precision:2,
             orientation: 'p',
             unit: 'mm',
+            putOnlyUsedFonts: true,
 		});
         doc.setTextColor("black");
 
         let htmlElem = (
             recommended.map((x,k)=>
-            <div style={{fontSize:"10px !important",width:"300px"}} className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO+ " Producto #"+x.vm_forecast_dash_row_num}
+            <div style={{display:"inline",fontSize:"10px !important",width:"300px"}} className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO+ " Producto #"+x.vm_forecast_dash_row_num}
                 {x.suggestions.map((y,l)=>
-                    <span style={{fontSize:"10px !important",width:"200px"}} key={l} className="suggestion" >{"Cambiar por: "+y.p_PRODUCTO}</span>
+                    <span style={{display:"inline",fontSize:"10px !important",width:"200px"}} key={l} className="suggestion" >{"Cambiar por: "+y.p_PRODUCTO}</span>
                 )}
             </div>
             )
