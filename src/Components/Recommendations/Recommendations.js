@@ -1,10 +1,11 @@
 import React, { Component } from "react";
+import jsPDF from 'jspdf';
 
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import { Button } from "antd";
-import { CloseOutlined } from "@ant-design/icons";
+import { CloseOutlined, EyeFilled, EyeInvisibleFilled } from "@ant-design/icons";
 import { QUERY_RECOMMENDATIONS } from "../../Constants";
 import { get_all_data, get_slug, oauth_login } from "../../LookerSession";
 
@@ -64,12 +65,12 @@ class Recommendations extends Component {
                     </Row>
                     <Row className="prod-block-div-row-1">
                         <Col>
-                            <Container className="aftrem">
+                        <Container className="aftrem">
                             {recommended.map((x,k)=>
                             <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
                             <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
                                 {x.suggestions.map((y,l)=>
-                                    <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{y.p_PRODUCTO+" - FORECAST: "+y.max_forecast_value}</span>
+                                    <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por:"+y.p_PRODUCTO}</span>
                                 )}
                             </div>
                             )}
@@ -79,43 +80,89 @@ class Recommendations extends Component {
                     <Row>
                         <Button className="btn-closeModal" type="primary" shape="default" icon={<CloseOutlined />} onClick={()=>{this.props.changeShow()}} >Volver</Button>
                     </Row>
+                    <Row>
+                        <Button className="btn-generatePDF" type="dashed" shape="default" icon={<EyeFilled />} onClick={()=>{this.generatePDF()}} >Generar PDF</Button>
+                    </Row>
                 </Container>
             </Container>
         );
+    }
+
+    generatePDF = () =>{
+        const {recommended} = this.state;
+
+        const doc = new jsPDF({
+			format: 'a4',
+			unit: 'px',
+		});
+
+        const htmlElem = (
+        <Container className="aftrem">
+        {recommended.map((x,k)=>
+        <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
+        <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
+            {x.suggestions.map((y,l)=>
+                <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por:"+y.p_PRODUCTO}</span>
+            )}
+        </div>
+        )}
+        </Container>
+        )
+        
+        doc.html(htmlElem, {
+			async callback(doc) {
+				await doc.save('document');
+			},
+		});
     }
 
     searchRecommendations = async (subData) => {
         let html = [];
         let tk = this.state.tkn;
         this.setState({loading:true});
-        await subData.map(async (productRow,j)=>{
+        subData.map(async (productRow,j)=>{
             productRow.map(async(product,k)=>{
                 if(Object.keys(product).length==0) return;
                 var newProd = product;
                 var suggestions = [];
                 //console.log(product);
                     try {
-                        const slug = await get_slug(tk,QUERY_RECOMMENDATIONS(newProd));
+                        this.setState({loading:true});
+                        let slug = "";
+                        if(newProd.vm_forecast_dash_obs_cliente != "DOWN"){
+                            slug = await get_slug(tk,QUERY_RECOMMENDATIONS(newProd));
+                        }
                         try{
-                            suggestions = await get_all_data(slug,tk); //LOOKER JSONS
+                            if(newProd.vm_forecast_dash_obs_cliente != "DOWN"){
+                                suggestions = await get_all_data(slug,tk); //LOOKER JSONS
+                            }
                         }catch(e){
                             console.error("No se pudo obtener el resultado del query:", e);
                         }finally{
-                            console.log("for",newProd.cp_PRODUCTO,"Suggestions:",suggestions);
-                            newProd.suggestions = suggestions;
+                            //console.log("for",newProd.cp_PRODUCTO,"Suggestions:",suggestions);
+                            var newSuggestions=[];
+                            var cont = 0;
+                            suggestions.map((x,k)=>{
+                                if(x!=product && cont<3 ){
+                                    cont++;
+                                    newSuggestions.push(x);
+                                }
+                            })
+                            newProd.suggestions = newSuggestions;
                             newProd.x=j+1;
                             newProd.y=k+1;
                             html.push(newProd);
+                            html = html.sort((a,b)=>a.vm_forecast_dash_row_num-b.vm_forecast_dash_row_num);
+                            this.setState({recommended:html});
                         }
                     } catch (error) {
                         console.error("No se pudo obtener el Token:", error);
+                    }finally{
+                        this.setState({loading:false});
                     }
                 
             }) 
         })
-        html = html.sort((a,b)=>a-b);
-        this.setState({recommended:html});
-        this.setState({loading:true});
         return html;
     }
 
