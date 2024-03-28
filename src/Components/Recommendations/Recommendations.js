@@ -97,7 +97,7 @@ class Recommendations extends Component {
 		});
         doc.setFont('Inter-Regular', 'normal');
         doc.setTextColor("black");
-        doc.setFontSize(18);
+        doc.setFontSize(10);
 
         let htmlElem = (
             recommended.map((x,k)=>
