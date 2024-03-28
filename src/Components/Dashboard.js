@@ -177,11 +177,11 @@ class Dashboard extends Component {
           <Row id="wrapper">
           {selectedClient==""?"":
             <Row className="vender-title-pdv" style={{height:"5%"}}>
-              <div className="title-vender"><h1>{selectedClient}</h1></div>
+              <div className="title-vender"><h1>{"Cliente: "+selectedClient}</h1></div>
               {selectedPDV==""?"":
-              <div className="title-vender title-vender-pdv"><h1>{"->  "+selectedPDV}</h1></div>}
+              <div className="title-vender title-vender-pdv"><h1>{"-> Punto de Venta:"+selectedPDV}</h1></div>}
               {lastPDVDate==""?"":
-              <div className="title-vender title-vender-date"><h1>{" -  Última Visita: "+lastPDVDate}</h1></div>}
+              <div className="title-vender title-vender-date"><h1>{" -  Última Visita: "+this.formatDate(lastPDVDate)}</h1></div>}
             </Row>
           }
             <Row id="vending-wrap" style={{height:"50%"}}>
@@ -806,6 +806,18 @@ calculateIndividualCharts=(product)=>{
     this.calculateGeneralCharts(prod);
   }
 
+  formatDate(dateString) {
+    // Crea un objeto Date a partir de la cadena
+    const date = new Date(dateString);
+
+    // Extrae el día, mes y año
+    const day = date.getDate();
+    const month = date.getMonth() + 1; // getMonth() devuelve un índice basado en cero, por lo que se suma 1
+    const year = date.getFullYear();
+    
+    // Retorna la cadena formateada, asegurándote de que el día y el mes tengan dos dígitos
+    return `${day.toString().padStart(2, '0')}-${month.toString().padStart(2, '0')}-${year}`;
+}
   
 }
 

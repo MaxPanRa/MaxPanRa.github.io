@@ -1,5 +1,6 @@
 import React, { Component } from "react";
 import jsPDF from 'jspdf';
+import { renderToStaticMarkup } from 'react-dom/server'
 
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
@@ -108,7 +109,7 @@ class Recommendations extends Component {
         )}
         </Container>
         )
-        
+        htmlElem = renderToStaticMarkup(htmlElem);
         doc.html(htmlElem, {
 			async callback(doc) {
 				await doc.save('document');
@@ -129,11 +130,11 @@ class Recommendations extends Component {
                     try {
                         this.setState({loading:true});
                         let slug = "";
-                        if(newProd.vm_forecast_dash_obs_cliente != "DOWN"){
+                        if(newProd.vm_forecast_dash_obs_cliente == "DOWN"){
                             slug = await get_slug(tk,QUERY_RECOMMENDATIONS(newProd));
                         }
                         try{
-                            if(newProd.vm_forecast_dash_obs_cliente != "DOWN"){
+                            if(newProd.vm_forecast_dash_obs_cliente == "DOWN"){
                                 suggestions = await get_all_data(slug,tk); //LOOKER JSONS
                             }
                         }catch(e){

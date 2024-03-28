@@ -693,7 +693,7 @@ ul.slick-dots.slick-dots-bottom {
   background: #feb8d0 !important;
 }
 .--upg{
-  background: #cbfdff !important;
+  background: #b8feb8 !important;
 }
 
 .UP-upg *, .DOWN-upg * {
@@ -871,7 +871,7 @@ h2.recom-title-gral {
 }
 .--recom {
   color: #1f1f1f;
-  background: #8de6ff;
+  background: #bbffc1;
   padding: 0px 0px;
 }
 .DOWN-recom {
@@ -1065,9 +1065,20 @@ span.btn-vend-ROW {
 }
 
 .--upg-vend {
-  background: #98eff3 !important;
+  background: #7af47a !important;
 }
 
 .DOWN-upg-vend {
   background: #ee4c84 !important;
+}
+
+.btn-generatePDF {
+  width: 50%;
+  height: 45px;
+  margin: 0 auto;
+  margin-top: -25px;
+  background: #d0413e;
+  color: white;
+  display: block;
+  text-align: center;
 }
