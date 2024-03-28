@@ -97,7 +97,7 @@ class Recommendations extends Component {
 			unit: 'px',
 		});
 
-        const htmlElem = (
+        let htmlElem = (
         <Container className="aftrem">
         {recommended.map((x,k)=>
         <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
