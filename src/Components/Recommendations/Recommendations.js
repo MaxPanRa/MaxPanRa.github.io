@@ -71,7 +71,7 @@ class Recommendations extends Component {
                             <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
                             <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
                                 {x.suggestions.map((y,l)=>
-                                    <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por:"+y.p_PRODUCTO}</span>
+                                    <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por: "+y.p_PRODUCTO}</span>
                                 )}
                             </div>
                             )}
@@ -97,21 +97,22 @@ class Recommendations extends Component {
 			unit: 'px',
 		});
         doc.setFont('Inter-Regular', 'normal');
+        doc.setTextColor("black");
         doc.setFontSize(18);
 
         let htmlElem = (
-            <Container className="recom-white">
-                <Row className="recom-title">
-                <h2 className="recom-title-gral">Sugerencias</h2>
+            <Container className="recom-white" style={{width:"100%"}}>
+                <Row className="recom-title" style={{width:"100%"}}>
+                <h2 className="recom-title-gral" style={{width:"100%"}}>Sugerencias</h2>
                 </Row>
-                <Row className="prod-block-div-row-1">
+                <Row className="prod-block-div-row-1" style={{width:"100%"}}>
                     <Col>
                     <Container className="aftrem">
                         {recommended.map((x,k)=>
                         <div className={x.vm_forecast_dash_obs_cliente+"-recom prod-txt"}>{x.vm_forecast_dash_PRODUCTO}
                         <span className="filacol-title">{/*"Fila ["+x.x+"] Columna ["+x.y+"]"*/"Producto #"+x.vm_forecast_dash_row_num}</span>
                             {x.suggestions.map((y,l)=>
-                                <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por:"+y.p_PRODUCTO}</span>
+                                <span key={l} className="suggestion" onClick={()=>{console.log(y)}}>{"Cambiar por: "+y.p_PRODUCTO}</span>
                             )}
                         </div>
                         )}
