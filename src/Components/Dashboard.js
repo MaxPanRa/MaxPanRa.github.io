@@ -302,7 +302,7 @@ class Dashboard extends Component {
                 <Container className="containPad">
                   <Col sm={12} md={10} id="carousel-box">
                     <Row className="gray-box">
-                      {selectedPDV!=""?<h1>SOCVI</h1>:""}
+                      {selectedPDV!=""?<h1>Productos de {selectedClient}</h1>:""}
                       {selectedPDV== "" || queryProducts.length == 0 ? "":
                       <Carousel touchMove={true} arrows afterChange={this.onChange} dots={true} dotWidth={20} prevArrow={<LeftSquareOutlined />} nextArrow={<RightSquareOutlined />} >
                         {queryProducts.map((x)=>x)}

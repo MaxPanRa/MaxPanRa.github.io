@@ -82,7 +82,7 @@ class Recommendations extends Component {
                         <Button className="btn-closeModal" type="primary" shape="default" icon={<CloseOutlined />} onClick={()=>{this.props.changeShow()}} >Volver</Button>
                     </Row>
                     <Row>
-                        <Button className="btn-generatePDF" disabled={loading} type="dashed" shape="default" icon={<EyeFilled />} onClick={()=>{this.generatePDF()}} >Generar PDF</Button>
+                    {loading?"":<Button className="btn-generatePDF" disabled={loading} type="dashed" shape="default" icon={<EyeFilled />} onClick={()=>{this.generatePDF()}} >Generar PDF</Button>}
                     </Row>
                 </Container>
             </Container>
@@ -123,6 +123,8 @@ class Recommendations extends Component {
         let html = [];
         let tk = this.state.tkn;
         this.setState({loading:true});
+        let total = subData.length;
+        let currents = 0;
         subData.map(async (productRow,j)=>{
             productRow.map(async(product,k)=>{
                 if(Object.keys(product).length==0) return;
@@ -156,12 +158,14 @@ class Recommendations extends Component {
                             newProd.y=k+1;
                             html.push(newProd);
                             html = html.sort((a,b)=>a.vm_forecast_dash_row_num-b.vm_forecast_dash_row_num);
+                            currents++;
                             this.setState({recommended:html});
+                            if(currents-1 == total){
+                                this.setState({loading:false});
+                            }
                         }
                     } catch (error) {
                         console.error("No se pudo obtener el Token:", error);
-                    }finally{
-                        this.setState({loading:false});
                     }
                 
             }) 
