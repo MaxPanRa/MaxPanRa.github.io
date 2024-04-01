@@ -160,7 +160,7 @@ class Recommendations extends Component {
                             html = html.sort((a,b)=>a.vm_forecast_dash_row_num-b.vm_forecast_dash_row_num);
                             currents++;
                             this.setState({recommended:html});
-                            if(currents-1 == total){
+                            if(currents-1 >= total){
                                 this.setState({loading:false});
                             }
                         }
