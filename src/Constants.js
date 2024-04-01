@@ -14,4 +14,8 @@ export const QUERY_RECOMMENDATIONS= (p)=>{
     return `SELECT f.PRODUCTOID, p.PRODUCTO, p.tipo, MAX(f.forecast_value) AS max_forecast_value FROM [arca-vm-analytics.poc_vm_data.vm_forecast_c] AS f JOIN [arca-vm-analytics.poc_vm_data.cat_productos] AS p on f.PRODUCTOID = p.PRODUCTOID WHERE tipo="${p.cp_tipo}" AND CLIENTE='${p.vm_forecast_dash_CLIENTE}' GROUP BY f.PRODUCTOID, p.PRODUCTO, p.tipo, ORDER BY max_forecast_value DESC LIMIT 4`
 }
 
+export const QUERY_ALL_CLIENT_PRODUCTS = (cliente)=>{
+    return `SELECT * FROM [arca-vm-analytics.poc_vm_data.vm_forecast_dash] WHERE CLIENTE == "${cliente}" ORDER BY PDV DESC;`
+}
+
 export const ALLFILTERS=["bebida","botana","panaderia","dulceria"]

@@ -17,7 +17,7 @@ import pdvsJson from './pdvs.json';
 import { Button, Carousel, Image, Input, Select, Space, Tooltip } from 'antd';
 import { Option } from "antd/es/mentions";
 import { CheckCircleOutlined, ClearOutlined, CompassOutlined, EyeInvisibleOutlined, EyeOutlined, LeftSquareOutlined, ReloadOutlined, RightSquareOutlined, SearchOutlined, StarOutlined, StopOutlined } from "@ant-design/icons";
-import { ALLFILTERS, QUERY_MACHINE_PRODUCTS, QUERY_PDVS, SLUG_QUERY } from "../Constants";
+import { ALLFILTERS, QUERY_ALL_CLIENT_PRODUCTS, QUERY_MACHINE_PRODUCTS, QUERY_PDVS, SLUG_QUERY } from "../Constants";
 import Recommendations from "./Recommendations/Recommendations";
 import { keyboard } from "@testing-library/user-event/dist/keyboard";
 
@@ -364,11 +364,14 @@ class Dashboard extends Component {
     const {vendingCols,vendingRows} = this.state;
     this.setState({selectedPDV:value});
     let products = []; //query to get Products
+    let productsALL = []; //query to get Products
     try {
       let tk = this.state.tkn;
       const slug = await get_slug(tk,QUERY_MACHINE_PRODUCTS(value));
+      const slug2 = await get_slug(tk,QUERY_ALL_CLIENT_PRODUCTS(this.state.selectedClient));
       try{
         products = await get_all_data(slug,tk); //LOOKER JSONS
+        productsALL = await get_all_data(slug2,tk); //LOOKER JSONS
       }catch(e){
         console.error("No se pudo obtener el resultado del query:", e);
         products=data;  //LOCAL JSONS
@@ -377,16 +380,16 @@ class Dashboard extends Component {
       console.error("No se pudo obtener el Token:", error);
     }
 
-    this.setState({productsData:products},()=>{
+    this.setState({vendingData:products,productsData:productsALL},()=>{
       this.getProducts();
       this.addVendingProducts();
     });
   }
 
   addVendingProducts=()=>{
-    const {vendingRows,vendingCols, productsData} = this.state;
+    const {vendingRows,vendingCols, vendingData} = this.state;
     let cleanedData = [];
-    cleanedData=this.sortRowData(productsData);
+    cleanedData=this.sortRowData(vendingData);
     let productsInVending = this.empty2dArray(vendingRows,vendingCols);
     let lastDate="";
     //debugger;
