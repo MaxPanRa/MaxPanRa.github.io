@@ -15,7 +15,7 @@ export const QUERY_RECOMMENDATIONS= (p)=>{
 }
 
 export const QUERY_ALL_CLIENT_PRODUCTS = (cliente)=>{
-    return `SELECT * FROM [arca-vm-analytics.poc_vm_data.vm_forecast_dash] WHERE CLIENTE == "${cliente}" ORDER BY PDV DESC;`
+    return `SELECT *, FROM [arca-vm-analytics.poc_vm_data.vm_forecast_dash] AS vm_forecast_dash JOIN [arca-vm-analytics.poc_vm_data.cat_productos] AS cp ON vm_forecast_dash.PRODUCTOID = cp.PRODUCTOID WHERE CLIENTE == "${cliente}" ORDER BY PDV DESC;`
 }
 
 export const ALLFILTERS=["bebida","botana","panaderia","dulceria"]
