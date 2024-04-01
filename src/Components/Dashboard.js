@@ -52,6 +52,7 @@ class Dashboard extends Component {
          typeProduct:ALLFILTERS,
          generalCharts:[],
          productCharts:[],
+         vendingData:[],
          filteredData:[],
          selectedProduct:{},
          vendingEmpty:[],
@@ -357,7 +358,9 @@ class Dashboard extends Component {
   }
 
   changeClientsCombo  = (value)=>{
-    this.setState({selectedClient:value,selectedPDV:""});
+    const {vendingCols,vendingRows} = this.state;
+    this.setState({selectedClient:value,selectedPDV:"", suggestionView:false, upgradedView:false,productsData:[],vendingData:[]});
+    this.setState({productsInVending:this.empty2dArray(vendingRows,vendingCols)});
   }
   changePDVCombo = async (value)=>{
     //FIND QUERY OBJECTS

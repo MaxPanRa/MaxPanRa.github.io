@@ -82,7 +82,7 @@ class Recommendations extends Component {
                         <Button className="btn-closeModal" type="primary" shape="default" icon={<CloseOutlined />} onClick={()=>{this.props.changeShow()}} >Volver</Button>
                     </Row>
                     <Row>
-                    {loading?"":<Button className="btn-generatePDF" disabled={loading} type="dashed" shape="default" icon={<EyeFilled />} onClick={()=>{this.generatePDF()}} >Generar PDF</Button>}
+                    <Button className="btn-generatePDF" disabled={loading} type="dashed" shape="default" icon={<EyeFilled />} onClick={()=>{this.generatePDF()}} >Generar PDF</Button>
                     </Row>
                 </Container>
             </Container>
