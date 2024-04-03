@@ -21,6 +21,7 @@ class Recommendations extends Component {
            show: false, 
            recommended:[],
            tkn:"",
+           listTitle:"",
        };
     }
 
@@ -31,6 +32,7 @@ class Recommendations extends Component {
             dataAfter:this.props.dataAfter,
             show: this.props.show,
             tkn:this.props.tkn,
+            listTitle:this.props.listTitle,
             loading:false,
         },()=>{
             this.searchRecommendations(this.state.dataBefore);
@@ -53,16 +55,22 @@ class Recommendations extends Component {
         if (this.props.tkn !== prevProps.tkn) {
             this.setState({ tkn: this.props.tkn });
         }
+        if (this.props.listTitle !== prevProps.listTitle) {
+            this.setState({ tkn: this.props.listTitle });
+        }
     }
 
     render(){
         //console.log(data);
-        const {dataBefore,dataAfter,show, recommended, loading}=this.state;
+        const {dataBefore,dataAfter,show, recommended, listTitle, loading}=this.state;
         return (
             <Container className={show ? "recom-show blackdrop":"recom-hide blackdrop"}>
                 <Container className="recom-white">
                     <Row className="recom-title">
                         {loading?<h2 className="recom-title-gral">Cargando Sugerencias...</h2>:<h2 className="recom-title-gral">Sugerencias</h2>}
+                    </Row>
+                    <Row className="recom-title">
+                        {<h2 className="recom-title-gral">{listTitle}</h2>}
                     </Row>
                     <Row className="prod-block-div-row-1">
                         <Col>

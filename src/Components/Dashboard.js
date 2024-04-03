@@ -174,7 +174,7 @@ class Dashboard extends Component {
     return (
       <>
         <Container id="wrapper-background" style={{height:windowSize+"px"}} onMouseMove={()=>{windowSize=window.innerHeight}}>
-          <Recommendations dataBefore={productsInVending} dataAfter={upgradedVending} show={showRecom} allData={this.sortForecastData(productsData)} changeShow={()=>{this.setState({showRecom:!showRecom})}} tkn={this.state.tkn}/>
+          <Recommendations listTitle={"Cliente: "+selectedClient+" -> Punto de Venta: "+selectedPDV+" - Última visita: "+this.formatDate(lastPDVDate)} dataBefore={productsInVending} dataAfter={upgradedVending} show={showRecom} allData={this.sortForecastData(productsData)} changeShow={()=>{this.setState({showRecom:!showRecom})}} tkn={this.state.tkn}/>
           <Row id="wrapper">
           {selectedClient==""?"":
             <Row className="vender-title-pdv" style={{height:"5%"}}>
@@ -303,7 +303,7 @@ class Dashboard extends Component {
                 <Container className="containPad">
                   <Col sm={12} md={10} id="carousel-box">
                     <Row className="gray-box">
-                      {selectedPDV!=""?<h1>Productos de {selectedClient}</h1>:""}
+                      {selectedPDV!=""?<h1>Inventario de {selectedClient}</h1>:""}
                       {selectedPDV== "" || queryProducts.length == 0 ? "":
                       <Carousel touchMove={true} arrows afterChange={this.onChange} dots={true} dotWidth={20} prevArrow={<LeftSquareOutlined />} nextArrow={<RightSquareOutlined />} >
                         {queryProducts.map((x)=>x)}
@@ -555,7 +555,10 @@ class Dashboard extends Component {
         if(Object.keys(x).length>0){
           totalCapConfig+=x.vm_forecast_dash_CAPACIDAD_CONFIGURADA;
           totalVendido+=x.vm_forecast_dash_VENDIDO;
-          const preciopieza = x.vm_forecast_dash_VENDIDO == 0 ? 0 : x.vm_forecast_dash_VAL_VENDIDO/x.vm_forecast_dash_VENDIDO;
+          let preciopieza = 0;
+          if(x.vm_forecast_dash_VAL_VENDIDO != 0){
+            preciopieza = x.vm_forecast_dash_VENDIDO == 0 ? 0 : x.vm_forecast_dash_VAL_VENDIDO/x.vm_forecast_dash_VENDIDO;
+          }
           totalDineroPosible+= preciopieza*totalCapConfig;
           totalDineroVendido+=x.vm_forecast_dash_VAL_VENDIDO;
         }
@@ -695,7 +698,7 @@ calculateIndividualCharts=(product)=>{
             
             return(
             <Col key={k2} xs="12" sm="6" md="4" lg="3" xl="2">
-              <Product data={product} upgradedView={upgradedView} classUpg={upgradedView ? product.vm_forecast_dash_obs_cliente+"-upg ":""} hoverObj={this.hoverObjectChange} clickObj={this.clickObjectChange} isSelected={product==this.state.selectedProduct}/>
+              <Product data={product} upgradedView={upgradedView} classUpg={false ? product.vm_forecast_dash_obs_cliente+"-upg ":""} hoverObj={this.hoverObjectChange} clickObj={this.clickObjectChange} isSelected={product==this.state.selectedProduct}/>
             </Col>
             )
           })

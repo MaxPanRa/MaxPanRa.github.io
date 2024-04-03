@@ -65,7 +65,7 @@ class Product extends Component {
         return (
             <Container className={isSelected ? classUpg+"prod-block selected":classUpg+"prod-block"} onMouseEnter={()=>{this.props.hoverObj(data)}} onMouseUp={()=>{this.props.clickObj(data)}}>
                 <Row className="prod-block-qty-row" >
-                    <span className="prod-block-qty">QTY: {data.vm_forecast_dash_CAPACIDAD_CONFIGURADA}</span>
+                    {/*<span className="prod-block-qty">QTY: {data.vm_forecast_dash_CAPACIDAD_CONFIGURADA}</span>*/}
                 </Row>
                 <Row className="prod-block-div-row">
                     <div className="prod-block-div">
