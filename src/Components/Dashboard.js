@@ -555,7 +555,7 @@ class Dashboard extends Component {
         if(Object.keys(x).length>0){
           totalCapConfig+=x.vm_forecast_dash_CAPACIDAD_CONFIGURADA;
           totalVendido+=x.vm_forecast_dash_VENDIDO;
-          let preciopieza = 0;
+          var preciopieza = 0;
           if(x.vm_forecast_dash_VAL_VENDIDO != 0){
             preciopieza = x.vm_forecast_dash_VENDIDO == 0 ? 0 : x.vm_forecast_dash_VAL_VENDIDO/x.vm_forecast_dash_VENDIDO;
           }

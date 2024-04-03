@@ -56,7 +56,7 @@ class Recommendations extends Component {
             this.setState({ tkn: this.props.tkn });
         }
         if (this.props.listTitle !== prevProps.listTitle) {
-            this.setState({ tkn: this.props.listTitle });
+            this.setState({ listTitle: this.props.listTitle });
         }
     }
 
@@ -98,7 +98,7 @@ class Recommendations extends Component {
     }
 
     generatePDF = () =>{
-        const {recommended} = this.state;
+        const {recommended, listTitle} = this.state;
 
         const doc = new jsPDF({
 			format: 'letter',
@@ -119,7 +119,10 @@ class Recommendations extends Component {
             )
         )
 
-        htmlElem = renderToStaticMarkup(htmlElem);
+        let anotherElem=(<div><h2 className="recom-title-gral">{listTitle}</h2>{htmlElem}</div>);
+        
+
+        htmlElem = renderToStaticMarkup(anotherElem);
         doc.html(htmlElem, {
 			async callback(doc) {
 				await doc.save('document');
