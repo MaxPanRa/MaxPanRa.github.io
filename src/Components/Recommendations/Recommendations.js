@@ -119,7 +119,7 @@ class Recommendations extends Component {
             )
         )
 
-        let anotherElem=(<div><span style={{fontFamily:"Arial",fontSize:"10px !important",width:"600px"}} className="suggestion" >{listTitle}</span>{htmlElem}</div>);
+        let anotherElem=( <div style={{fontFamily:"Arial",fontSize:"10px !important",width:"1000px"}} >{listTitle}{htmlElem}</div>);
         
 
         htmlElem = renderToStaticMarkup(anotherElem);

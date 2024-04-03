@@ -559,9 +559,8 @@ class Dashboard extends Component {
           if(x.vm_forecast_dash_VAL_VENDIDO != 0){
             preciopieza = x.vm_forecast_dash_VENDIDO == 0 ? 0 : x.vm_forecast_dash_VAL_VENDIDO/x.vm_forecast_dash_VENDIDO;
           }
-          totalDineroPosible+= preciopieza*totalCapConfig;
+          totalDineroPosible+= preciopieza*x.vm_forecast_dash_CAPACIDAD_CONFIGURADA;
           totalDineroVendido+=x.vm_forecast_dash_VAL_VENDIDO;
-          console.log("Product",x.vm_forecast_dash_PRODUCTO,"Vendido",x.vm_forecast_dash_VENDIDO,"Total Posible",preciopieza*totalCapConfig);
         }
       });
     });
