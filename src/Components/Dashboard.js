@@ -561,6 +561,7 @@ class Dashboard extends Component {
           }
           totalDineroPosible+= preciopieza*totalCapConfig;
           totalDineroVendido+=x.vm_forecast_dash_VAL_VENDIDO;
+          console.log("Product",x.vm_forecast_dash_PRODUCTO,"Vendido",x.vm_forecast_dash_VENDIDO,"Total Posible",preciopieza*totalCapConfig);
         }
       });
     });

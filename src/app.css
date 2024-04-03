@@ -1076,9 +1076,12 @@ span.btn-vend-ROW {
   width: 50% !important;
   height: 45px;
   margin: 0 auto !important;
-  margin-top: -25px !important;
+  margin-top: -50px !important;
   background: #d0413e;
   color: white;
   display: block;
   text-align: center;
+}
+h2.recom-title-gral {
+  margin: -10px;
 }
