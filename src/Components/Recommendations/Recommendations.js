@@ -159,7 +159,7 @@ class Recommendations extends Component {
                             var newSuggestions=[];
                             var cont = 0;
                             suggestions.map((x,k)=>{
-                                if(x!=product && cont<3 ){
+                                if(x.f_PRODUCTOID!=product.vm_forecast_dash_PRODUCTOID && cont<3 ){
                                     cont++;
                                     newSuggestions.push(x);
                                 }
