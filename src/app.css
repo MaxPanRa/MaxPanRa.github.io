@@ -1085,3 +1085,8 @@ span.btn-vend-ROW {
 h2.recom-title-gral {
   margin: -10px;
 }
+
+.chartBox {
+  margin: 0 !important;
+  padding: 0px !important;
+}
