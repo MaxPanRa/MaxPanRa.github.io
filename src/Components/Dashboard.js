@@ -259,7 +259,7 @@ class Dashboard extends Component {
                         <Tooltip title="Alternar Vista" className="tool-vend" >
                           <Button type={upgradedView?"dashed":"primary"} shape="round" icon={upgradedView?<EyeInvisibleOutlined/> : <EyeOutlined />} onClick={()=>{this.alternateVista()}} style={{}}/>
                         </Tooltip>
-                        { suggestionView?
+                        { suggestionView && false?
                           <Tooltip title="Salir de Sugerencia Mejorada" className="tool-vend">
                             <Button type="dashed" shape="round" icon={<StopOutlined />} onClick={()=>{this.removeUpgrade()}} />
                           </Tooltip> 
