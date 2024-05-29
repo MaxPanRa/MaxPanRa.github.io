@@ -176,15 +176,15 @@ class Dashboard extends Component {
         <Container id="wrapper-background" style={{height:windowSize+"px"}} onMouseMove={()=>{windowSize=window.innerHeight}}>
           <Recommendations listTitle={"Cliente: "+selectedClient+" -> Punto de Venta: "+selectedPDV+" - Última visita: "+this.formatDate(lastPDVDate)} dataBefore={productsInVending} dataAfter={upgradedVending} show={showRecom} allData={this.sortForecastData(productsData)} changeShow={()=>{this.setState({showRecom:!showRecom})}} tkn={this.state.tkn}/>
           <Row id="wrapper">
-          {selectedClient==""?"":
             <Row className="vender-title-pdv" style={{height:"5%"}}>
-              <div className="title-vender"><h1>{"Cliente: "+selectedClient}</h1></div>
+              <img src={"/Images/GtecIcon.png"} alt="Gtec" className="LogoGTEC"/>
+              {selectedPDV==""?"":<div className="title-vender"><h1>{"Cliente: "+selectedClient}</h1></div>}
               {selectedPDV==""?"":
               <div className="title-vender title-vender-pdv"><h1>{"-> Punto de Venta: "+selectedPDV}</h1></div>}
               {lastPDVDate==""?"":
               <div className="title-vender title-vender-date"><h1>{"-  Última Visita: "+this.formatDate(lastPDVDate)}</h1></div>}
             </Row>
-          }
+          
             <Row id="vending-wrap" style={{height:"50%"}}>
               <Col sm={9} className="vend-col">
                 <Row className="vending-row">

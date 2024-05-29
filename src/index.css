@@ -187,3 +187,114 @@ code {
 .vm-btns {
   transition: 0.5s;
 }
+
+/*--------------------------------------------------------------------*/
+
+div#wrapper-background {
+  background: linear-gradient(0deg,#919192,#E4005C 37%,#E4005C)!important;
+}
+
+div#products-section .containPad.container {
+  background: #012A5C  !important;
+  border: 2px solid #043A78 !important;
+}
+
+.blue-box {
+  background: #012A5C !important;
+  border: 2px solid #043A78 !important;
+}
+
+.vending-row.row {
+  background: #012A5C  !important;
+  /* border: 2px solid #043A78 !important; */
+}
+
+.vender-chose.row {
+  background: #E4005C!important;
+}
+
+input#rc_select_0 {
+  color: #E4005C!important;
+}
+
+.vending-sub-row.row, .vending-sub-row-inner.col {
+  background:linear-gradient(180deg,#919192,#919192 4%,#919192 17%,#919192 89%,#919192 99%)!important
+}
+
+.subtitle-card {
+  background: #3AEBFE !important;
+  color: #043A78 !important;
+  height: 30px;
+}
+
+.DOWN-recom, .DOWN-upg {
+  background: #eea0bf !important;
+  /* color: white; */
+}
+
+.UP-recom, .UP-upg, .--upg {
+  background: #94faafe8 !important;
+}
+
+h2.recom-title-gral {
+  padding: 20px 15%;
+}
+
+.vender-title-pdv.row {
+  background: #E4005C!important;
+}
+
+.gray-box h1 {
+  background:#31D3F9;
+  color:black;
+  border-radius:5px;
+}
+
+span.pie-chart-title {
+  background: #31D3F9;color:black;
+}
+
+.ant-btn-primary, .ant-btn-dashed{
+  background: #FFFFFF !important;
+  color:black;
+  box-shadow:0 0 5px 0 black inset;
+  border:none;
+}
+.ant-btn-primary:hover, .ant-btn-dashed:hover {
+  color:#E4005C !important;
+  box-shadow:0 0 5px 0 #E4005C inset;
+  border:none;
+}
+
+.ant-btn-default {
+  background: #919192 !important;
+}
+
+.slick-arrow *{
+  background: #E4005C!important;
+  color:white;
+}
+
+ul.slick-dots.slick-dots-bottom li.slick-active button {
+  background: #E4005C !important;
+}
+.vending-prod.col:hover span.btn-vend-ROW, .vending-prod.filled-vend:hover{
+  background: #e4005c96 !important;
+}
+
+button.ant-btn.css-1uq8vze.ant-btn-primary.btn-closeModal {
+  box-shadow: none !important;
+}
+
+
+button.ant-btn.css-1uq8vze.ant-btn-round.ant-btn-primary.tool-vend.recommTool {
+  background: #E4005C !important;color:white !important;
+}
+img.LogoGTEC {
+  max-height: 85%;
+  width: auto;
+  background: white;
+  border-radius: 5px;
+  padding: 5px 10px 1px 10px;
+  border: 2px solid #5f5f5f;
+}
