@@ -1,6 +1,6 @@
 {
   "files": {
-    "main.css": "/static/css/main.fd9d6838.css",
+    "main.css": "/static/css/main.694b63e0.css",
     "main.js": "/static/js/main.d3c2b515.js",
     "static/js/239.dc24ec8f.chunk.js": "/static/js/239.dc24ec8f.chunk.js",
     "static/js/213.d3fa1d8b.chunk.js": "/static/js/213.d3fa1d8b.chunk.js",
@@ -8,14 +8,14 @@
     "static/media/Vending Machine.png": "/static/media/Vending Machine.4dfe2641fc5f0c834405.png",
     "static/media/vending buttons.png": "/static/media/vending buttons.de3101d01054b4f86089.png",
     "index.html": "/index.html",
-    "main.fd9d6838.css.map": "/static/css/main.fd9d6838.css.map",
+    "main.694b63e0.css.map": "/static/css/main.694b63e0.css.map",
     "main.d3c2b515.js.map": "/static/js/main.d3c2b515.js.map",
     "239.dc24ec8f.chunk.js.map": "/static/js/239.dc24ec8f.chunk.js.map",
     "213.d3fa1d8b.chunk.js.map": "/static/js/213.d3fa1d8b.chunk.js.map",
     "667.1dd80b50.chunk.js.map": "/static/js/667.1dd80b50.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.fd9d6838.css",
+    "static/css/main.694b63e0.css",
     "static/js/main.d3c2b515.js"
   ]
 }

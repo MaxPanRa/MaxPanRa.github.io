@@ -191,7 +191,7 @@ code {
 /*--------------------------------------------------------------------*/
 
 div#wrapper-background {
-  background: linear-gradient(0deg,#919192,#E4005C 37%,#E4005C)!important;
+  background: linear-gradient(0deg,#919192,#E4005C 37%,#E4005C) !important;
 }
 
 div#products-section .containPad.container {
@@ -218,7 +218,7 @@ input#rc_select_0 {
 }
 
 .vending-sub-row.row, .vending-sub-row-inner.col {
-  background:linear-gradient(180deg,#919192,#919192 4%,#919192 17%,#919192 89%,#919192 99%)!important
+  background:linear-gradient(180deg,#919192,#919192 4%,#919192 17%,#919192 89%,#919192 99%) !important;
 }
 
 .subtitle-card {
@@ -237,32 +237,32 @@ input#rc_select_0 {
 }
 
 h2.recom-title-gral {
-  padding: 20px 15%;
+  padding: 20px 15% !important;
 }
 
 .vender-title-pdv.row {
-  background: #E4005C!important;
+  background: #E4005C !important;
 }
 
 .gray-box h1 {
-  background:#31D3F9;
-  color:black;
+  background:#31D3F9 !important;
+  color:black !important;
   border-radius:5px;
 }
 
 span.pie-chart-title {
-  background: #31D3F9;color:black;
+  background: #31D3F9 !important;;color:black !important;
 }
 
 .ant-btn-primary, .ant-btn-dashed{
   background: #FFFFFF !important;
-  color:black;
-  box-shadow:0 0 5px 0 black inset;
+  color:black !important;
+  box-shadow:0 0 5px 0 black inset !important;
   border:none;
 }
 .ant-btn-primary:hover, .ant-btn-dashed:hover {
   color:#E4005C !important;
-  box-shadow:0 0 5px 0 #E4005C inset;
+  box-shadow:0 0 5px 0 #E4005C inset !important;
   border:none;
 }
 
@@ -272,7 +272,7 @@ span.pie-chart-title {
 
 .slick-arrow *{
   background: #E4005C!important;
-  color:white;
+  color:white !important;
 }
 
 ul.slick-dots.slick-dots-bottom li.slick-active button {
@@ -288,7 +288,8 @@ button.ant-btn.css-1uq8vze.ant-btn-primary.btn-closeModal {
 
 
 button.ant-btn.css-1uq8vze.ant-btn-round.ant-btn-primary.tool-vend.recommTool {
-  background: #E4005C !important;color:white !important;
+  background: #E4005C !important;
+  color:white !important;
 }
 img.LogoGTEC {
   max-height: 85%;
