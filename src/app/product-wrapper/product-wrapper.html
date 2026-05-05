@@ -1,0 +1,129 @@
+<section class="designer-shell">
+  <header class="topbar">
+    <div class="topbar-brand" aria-label="Printit">
+      <strong>Print</strong><em>it</em>
+    </div>
+
+    <label class="upload-btn" [class.has-image]="hasWrapImage()">
+      <span class="upload-icon" aria-hidden="true">+</span>
+      <span>Imagen</span>
+      <input type="file" accept="image/*" (change)="onImageSelected($event)" [disabled]="isBaking()" />
+    </label>
+  </header>
+
+  <main class="workspace">
+    <section class="preview-panel" aria-label="Vista previa 3D">
+      <div
+        #canvasHost
+        class="canvas-host"
+        [class.is-baking]="isBaking()"
+        (pointerdown)="onPointerDown($event)"
+        (pointermove)="onPointerMove($event)"
+        (pointerup)="onPointerUp($event)"
+        (pointercancel)="onPointerUp($event)"
+      >
+        <canvas #previewCanvas aria-label="Objeto 3D con imagen aplicada"></canvas>
+
+        <p class="status-pill" aria-live="polite">{{ statusMessage() }}</p>
+
+        @if (isBaking()) {
+          <div class="bake-progress-bar" aria-hidden="true">
+            <div class="bake-progress-fill" [style.width.%]="bakeProgress()"></div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <aside class="control-panel" aria-label="Controles de diseno">
+      <section class="panel-section setup-section" aria-label="Configuracion">
+        <label class="field">
+          <span class="field-label">Modelo</span>
+          <select [(ngModel)]="selectedModelUrl" (change)="loadSelectedModel()" [disabled]="isBaking()">
+            @for (model of modelOptions; track model.url) {
+              <option [value]="model.url">{{ model.label }}</option>
+            }
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Modo</span>
+          <div class="mode-toggle">
+            <button
+              type="button"
+              class="mode-btn"
+              [class.active]="wrapMode === 'front'"
+              (click)="wrapMode = 'front'; updateWrap()"
+              [disabled]="isBaking() || stickerBaked()"
+            >Frontal</button>
+            <button
+              type="button"
+              class="mode-btn"
+              [class.active]="wrapMode === 'around'"
+              (click)="wrapMode = 'around'; updateWrap()"
+              [disabled]="isBaking() || stickerBaked()"
+            >Rodear</button>
+          </div>
+        </label>
+      </section>
+
+      <section class="panel-section sliders-section" aria-label="Ajustes de imagen">
+        <label class="field color-field">
+          <span class="field-label">Color del objeto</span>
+          <div class="color-control">
+            <input
+              type="color"
+              [(ngModel)]="objectColor"
+              (input)="updateObjectColor()"
+              [disabled]="isBaking()"
+              aria-label="Color del objeto 3D"
+            />
+            <span class="color-value">{{ objectColor }}</span>
+          </div>
+        </label>
+
+        <label class="field slider-field">
+          <div class="slider-header">
+            <span class="field-label">Tamano</span>
+            <span class="slider-value">{{ (wrapScale * 100) | number:'1.0-0' }}%</span>
+          </div>
+          <input
+            type="range"
+            min="0.08"
+            max="1"
+            step="0.01"
+            [(ngModel)]="wrapScale"
+            (input)="updateWrap()"
+            [disabled]="isBaking() || stickerBaked()"
+          />
+        </label>
+      </section>
+
+      @if (stickerBaked()) {
+        <section class="panel-section actions-section" aria-label="Acciones">
+          <button type="button" class="action-btn render-btn" (click)="renderBakedScene()" [disabled]="isRendering()">
+            <span class="btn-icon" aria-hidden="true">&#9728;</span>
+            <span>{{ isRendering() ? 'Renderizando' : 'Renderizar' }}</span>
+          </button>
+          <button type="button" class="action-btn reset-btn" (click)="resetBakedSticker()">
+            <span class="btn-icon" aria-hidden="true">&#8635;</span>
+            <span>Reset</span>
+          </button>
+        </section>
+      }
+    </aside>
+  </main>
+
+  @if (renderImageUrl(); as renderUrl) {
+    <section class="render-overlay" role="dialog" aria-modal="true" aria-label="Render del producto" (click)="closeRenderPreview()">
+      <div class="render-card" (click)="$event.stopPropagation()">
+        <header class="render-header">
+          <strong>Render</strong>
+          <button type="button" class="render-close" aria-label="Cerrar render" (click)="closeRenderPreview()">×</button>
+        </header>
+        <div class="render-stage">
+          <img [src]="renderUrl" alt="Objeto 3D renderizado con imagen horneada" />
+        </div>
+      </div>
+    </section>
+  }
+</section>

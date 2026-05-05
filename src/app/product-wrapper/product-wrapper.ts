@@ -1,0 +1,1861 @@
+import { CommonModule } from '@angular/common';
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
+  ViewChild,
+  signal,
+} from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
+
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+
+type ModelOption = { label: string; url: string };
+type Axis = 'x' | 'y' | 'z';
+type WrapMode = 'front' | 'around';
+
+type ProjectedVertex = {
+  hit: boolean;
+  position: THREE.Vector3;
+  uv: THREE.Vector2;
+};
+
+type FrontProjectionOptions = {
+  sourceMinU?: number;
+  sourceMaxU?: number;
+  placementMinU?: number;
+  placementMaxU?: number;
+};
+
+type FrontProjectionResult = {
+  geometry: THREE.BufferGeometry;
+  overflows: boolean;
+  horizontalOverflows: boolean;
+  verticalOverflows: boolean;
+  centerHit: boolean;
+  visibleMinU: number;
+  visibleMaxU: number;
+  visibleMinV: number;
+  visibleMaxV: number;
+};
+
+type FrontProjectionMetrics = {
+  projectionWidth: number;
+  projectionHeight: number;
+  center: THREE.Vector3;
+  modelCenter: THREE.Vector3;
+  radius: number;
+};
+
+type StickerStripOptions = {
+  sourceMinU: number;
+  sourceMaxU: number;
+  anchorU: number;
+  anchorAngle: number;
+  radiansPerU: number;
+};
+
+type BakeAnchor = {
+  angle: number;
+  radius: number;
+  point: THREE.Vector3;
+};
+
+type BvhGeometry = THREE.BufferGeometry & {
+  computeBoundsTree?: () => void;
+  disposeBoundsTree?: () => void;
+};
+
+@Component({
+  selector: 'app-product-wrapper',
+  imports: [CommonModule, FormsModule],
+  templateUrl: './product-wrapper.html',
+  styleUrl: './product-wrapper.scss',
+})
+export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('canvasHost', { static: true }) private canvasHost!: ElementRef<HTMLDivElement>;
+  @ViewChild('previewCanvas', { static: true }) private previewCanvas!: ElementRef<HTMLCanvasElement>;
+
+  readonly modelOptions: ModelOption[] = [
+    { label: 'Botella de prueba', url: 'procedural' },
+    { label: 'Caja abierta', url: 'procedural-box' },
+    { label: 'Taza', url: 'procedural-mug' },
+    { label: 'Pelota de futbol', url: 'procedural-soccer' },
+    { label: '1', url: '/assets/models/1.stl' },
+    { label: '2', url: '/assets/models/2.glb' },
+    { label: '3', url: '/assets/models/3.glb' },
+    { label: '4', url: '/assets/models/4.glb' },
+  ];
+
+  selectedModelUrl = this.modelOptions[0].url;
+  wrapMode: WrapMode = 'front';
+  statusMessage = signal('Vista previa lista');
+  isLoading = signal(false);
+  wrapScale = 0.34;
+  wrapHorizontal = 0.5;
+  wrapVertical = 0.46;
+  wrapOpacity = 1;
+  objectColor = '#f8faf8';
+  wrapOverflowsViewport = signal(false);
+  isBaking = signal(false);
+  stickerBaked = signal(false);
+  bakeProgress = signal(0);
+  hasWrapImage = signal(false);
+  renderImageUrl = signal<string | null>(null);
+  isRendering = signal(false);
+  slowMoBake = true;
+  slowMoBakeDelay = 20;
+
+  // ── Three.js core ──────────────────────────────────────
+  private readonly modelRoot = new THREE.Group();
+  private readonly textureSize = 2048;
+  private readonly wrapOffset = 0.012;
+  private readonly wrapSegments = 88;
+  private readonly overflowThreshold = 0.012;
+  private readonly raycaster = new THREE.Raycaster();
+  private readonly startTime = performance.now();
+  private camera!: THREE.PerspectiveCamera;
+  private renderer!: THREE.WebGLRenderer;
+  private scene!: THREE.Scene;
+  private resizeObserver?: ResizeObserver;
+  private frameId = 0;
+
+  // ── Model drag ─────────────────────────────────────────
+  private isDragging = false;
+  private lastPointerX = 0;
+
+  // ── Texture / wrap mesh ────────────────────────────────
+  private wrapTexture?: THREE.CanvasTexture;
+  private wrapImage?: HTMLImageElement;
+  private wrapCanvas?: HTMLCanvasElement;
+  private wrapMesh?: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  private bakedMesh?: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>;
+  private bakedPositions: number[] = [];
+  private bakedUvs: number[] = [];
+  private frontVisibleMinU = 0;
+  private frontVisibleMaxU = 1;
+
+  // ── Paper Mario floating sticker ───────────────────────
+  private floatingPreviewMesh?: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+  private isDraggingSticker = false;
+  private stickerAnimating = false;
+  private lastStickerPointerX = 0;
+  private lastStickerPointerY = 0;
+  private stickerVelX = 0;
+  private stickerVelY = 0;
+  private stickerRestPosition = new THREE.Vector3();
+  private stickerTargetPosition = new THREE.Vector3();
+  private stickerRestWidth = 1;
+  private frontHasHorizontalOverflow = false;
+  private frontCenterHasSurface = false;
+  private readonly floatingSegX = 20;
+  private readonly floatingSegY = 12;
+  private readonly floatingZOffset = 0.14;
+  private readonly stickerDragLerp = 0.24;
+  private readonly stickerDefaultOpacity = 1;
+  private readonly stickerDragOpacity = 0.9;
+  private readonly stickerInvalidOpacity = 0.7;
+
+  constructor(private readonly ngZone: NgZone) {}
+
+  ngAfterViewInit(): void {
+    this.initScene();
+    this.ngZone.runOutsideAngular(() => {
+      this.resizeObserver = new ResizeObserver(() => this.resizeRenderer());
+      this.resizeObserver.observe(this.canvasHost.nativeElement);
+      this.resizeRenderer();
+      this.animate();
+    });
+    void this.loadSelectedModel();
+  }
+
+  ngOnDestroy(): void {
+    cancelAnimationFrame(this.frameId);
+    this.resizeObserver?.disconnect();
+    this.clearModel();
+    this.wrapTexture?.dispose();
+    this.renderer?.dispose();
+  }
+
+  async loadSelectedModel(): Promise<void> {
+    this.isLoading.set(true);
+    this.statusMessage.set('Cargando modelo');
+    this.clearModel();
+    this.modelRoot.quaternion.identity();
+
+    try {
+      const model = this.isProceduralModel(this.selectedModelUrl)
+        ? this.createProceduralModel(this.selectedModelUrl)
+        : await this.loadModelFromAsset(this.selectedModelUrl);
+
+      this.modelRoot.add(model);
+      this.normalizeModel();
+      this.applyBaseMaterials();
+      this.rebuildShrinkWrap();
+      this.frameCamera();
+      this.statusMessage.set(
+        this.isProceduralModel(this.selectedModelUrl)
+          ? `${this.getSelectedModelLabel()} listo`
+          : 'Modelo cargado desde assets',
+      );
+    } catch (error) {
+      this.modelRoot.add(this.createBottleModel());
+      this.normalizeModel();
+      this.applyBaseMaterials();
+      this.rebuildShrinkWrap();
+      this.frameCamera();
+      this.statusMessage.set('No se encontro el asset, usando botella de prueba');
+      console.warn('Model load failed:', error);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  onImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.statusMessage.set('Selecciona una imagen valida');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = typeof reader.result === 'string' ? reader.result : '';
+      const image = new Image();
+
+      image.onload = () => {
+        this.wrapImage = image;
+        this.hasWrapImage.set(true);
+        this.resetBake();
+        this.redrawWrapTexture();
+        this.rebuildShrinkWrap();
+        this.statusMessage.set('Arrastra el sticker para posicionarlo');
+        input.value = '';
+      };
+
+      image.onerror = () => {
+        this.statusMessage.set('No se pudo leer la imagen');
+        input.value = '';
+      };
+
+      image.src = src;
+    };
+    reader.onerror = () => {
+      this.statusMessage.set('No se pudo abrir la imagen');
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  updateWrap(): void {
+    if (this.stickerBaked()) return;
+    if (!this.isBaking()) this.resetBake();
+    this.redrawWrapTexture();
+    this.rebuildShrinkWrap();
+  }
+
+  updateObjectColor(): void {
+    this.applyObjectColor();
+  }
+
+  performBake(fastBake = false): void {
+    if (!this.wrapImage || this.isBaking() || this.stickerBaked()) return;
+    if (!this.wrapMesh || this.wrapMesh.geometry.getAttribute('position').count === 0) {
+      this.statusMessage.set('Nada que hornear en la vista actual');
+      return;
+    }
+    this.isBaking.set(true);
+    this.statusMessage.set('Calculando horneado...');
+    void this.runCalculatedBake(fastBake);
+  }
+
+  resetBakedSticker(): void {
+    this.resetBake();
+    this.rebuildShrinkWrap();
+    this.statusMessage.set('Arrastra el sticker para posicionarlo');
+  }
+
+  renderBakedScene(): void {
+    if (!this.stickerBaked() || this.isRendering()) return;
+
+    this.isRendering.set(true);
+    try {
+      const imageUrl = this.captureStudioRender();
+      this.renderImageUrl.set(imageUrl);
+      this.statusMessage.set('Render listo');
+    } finally {
+      this.isRendering.set(false);
+    }
+  }
+
+  closeRenderPreview(): void {
+    this.renderImageUrl.set(null);
+  }
+
+  onPointerDown(event: PointerEvent): void {
+    if (this.isBaking()) return;
+    event.preventDefault();
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+
+    // Try sticker drag first
+    if (this.floatingPreviewMesh && this.wrapImage && !this.stickerBaked() && !this.stickerAnimating) {
+      const hit = this.raycastScreen(event.clientX, event.clientY, [this.floatingPreviewMesh]);
+      if (hit) {
+        this.isDraggingSticker = true;
+        this.lastStickerPointerX = event.clientX;
+        this.lastStickerPointerY = event.clientY;
+        this.stickerVelX = 0;
+        this.stickerVelY = 0;
+        this.stickerTargetPosition.copy(this.floatingPreviewMesh.position);
+        this.setFloatingPreviewOpacity(this.stickerDragOpacity);
+        this.animateStickerLift();
+        return;
+      }
+    }
+
+    // Model rotation drag
+    this.isDragging = true;
+    this.lastPointerX = event.clientX;
+  }
+
+  onPointerMove(event: PointerEvent): void {
+    if (this.isBaking()) return;
+
+    if (this.isDraggingSticker && this.floatingPreviewMesh) {
+      const stickerZ = this.floatingPreviewMesh.position.z;
+      const prevWorld = this.screenToWorldAtZ(this.lastStickerPointerX, this.lastStickerPointerY, stickerZ);
+      const currWorld = this.screenToWorldAtZ(event.clientX, event.clientY, stickerZ);
+
+      if (prevWorld && currWorld) {
+        const dx = currWorld.x - prevWorld.x;
+        const dy = currWorld.y - prevWorld.y;
+        this.stickerTargetPosition.x += dx;
+        this.stickerTargetPosition.y += dy;
+        this.stepStickerDragLerp();
+      }
+
+      this.lastStickerPointerX = event.clientX;
+      this.lastStickerPointerY = event.clientY;
+      return;
+    }
+
+    if (!this.isDragging) return;
+    const deltaX = event.clientX - this.lastPointerX;
+    this.lastPointerX = event.clientX;
+    this.rotateGlobal('y', deltaX * 0.01);
+  }
+
+  onPointerUp(event: PointerEvent): void {
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+
+    if (this.isDraggingSticker) {
+      this.isDraggingSticker = false;
+      void this.handleStickerDrop();
+      return;
+    }
+
+    this.isDragging = false;
+  }
+
+  // ── Sticker drop ───────────────────────────────────────
+
+  private async handleStickerDrop(): Promise<void> {
+    this.stickerAnimating = true;
+
+    // Rebuild logical wrap at current sticker position (skip floating preview rebuild)
+    this.rebuildShrinkWrap(true);
+
+    const hasSurface = !!(
+      this.wrapMesh &&
+      this.wrapMesh.geometry.getAttribute('position').count > 0
+    );
+
+    if (!this.canBakeCurrentStickerDrop(hasSurface)) {
+      this.stickerAnimating = false;
+      if (this.floatingPreviewMesh) {
+        this.stickerRestPosition.copy(this.floatingPreviewMesh.position);
+        this.stickerTargetPosition.copy(this.floatingPreviewMesh.position);
+        this.setFloatingPreviewOpacity(this.stickerInvalidOpacity);
+        this.deformFloatingPreview(0.035, 0, 0);
+      }
+      this.statusMessage.set('Suelta sobre el objeto para pegar');
+      return;
+    }
+
+    await this.animateStickerStamp();
+    this.stickerAnimating = false;
+
+    if (this.frontHasHorizontalOverflow) {
+      // Wrap-around bake
+      this.performBake(true);
+    } else {
+      // Front projection bake (instant)
+      this.bakeCurrentFrontProjection();
+    }
+  }
+
+  private bakeCurrentFrontProjection(message = 'Sticker horneado'): void {
+    if (!this.wrapMesh) return;
+
+    this.resetBake();
+    const posAttr = this.wrapMesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const uvAttr = this.wrapMesh.geometry.getAttribute('uv') as THREE.BufferAttribute;
+
+    for (let i = 0; i < posAttr.count; i++) {
+      this.bakedPositions.push(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+      this.bakedUvs.push(uvAttr.getX(i), uvAttr.getY(i));
+    }
+
+    this.rebuildBakedMesh();
+    this.disposeWrapMesh();
+    this.disposeFloatingPreview();
+    this.wrapOverflowsViewport.set(false);
+    this.stickerBaked.set(true);
+    this.bakeProgress.set(0);
+    this.statusMessage.set(message);
+  }
+
+  private canBakeCurrentStickerDrop(hasSurface: boolean): boolean {
+    return hasSurface && this.frontCenterHasSurface;
+  }
+
+  private isStickerCenterOverSurface(): boolean {
+    if (!this.wrapImage || this.wrapMode !== 'front') return false;
+    this.modelRoot.updateMatrixWorld(true);
+    const targetMeshes = this.getWrapTargets();
+    if (targetMeshes.length === 0) return false;
+
+    const modelBox = new THREE.Box3().setFromObject(this.modelRoot);
+    const modelSize = modelBox.getSize(new THREE.Vector3());
+    const projectionCenter = new THREE.Vector3(
+      THREE.MathUtils.lerp(modelBox.min.x, modelBox.max.x, this.wrapHorizontal),
+      THREE.MathUtils.lerp(modelBox.min.y, modelBox.max.y, this.wrapVertical),
+      modelBox.max.z + Math.max(modelSize.z, 0.5),
+    );
+    const far = Math.max(modelSize.x, modelSize.y, modelSize.z) * 3 + 2;
+    this.raycaster.set(projectionCenter, new THREE.Vector3(0, 0, -1));
+    this.raycaster.far = far;
+    return this.raycaster.intersectObjects(targetMeshes, false).length > 0;
+  }
+
+  private setFloatingPreviewOpacity(opacity: number): void {
+    const mesh = this.floatingPreviewMesh;
+    if (!mesh) return;
+    mesh.material.opacity = THREE.MathUtils.clamp(opacity, 0, 1);
+    mesh.material.needsUpdate = true;
+  }
+
+  private stepStickerDragLerp(force = false): void {
+    const mesh = this.floatingPreviewMesh;
+    if (!mesh) return;
+
+    const previousX = mesh.position.x;
+    const previousY = mesh.position.y;
+    const alpha = force ? 1 : this.stickerDragLerp;
+
+    mesh.position.x = THREE.MathUtils.lerp(mesh.position.x, this.stickerTargetPosition.x, alpha);
+    mesh.position.y = THREE.MathUtils.lerp(mesh.position.y, this.stickerTargetPosition.y, alpha);
+
+    const movedX = mesh.position.x - previousX;
+    const movedY = mesh.position.y - previousY;
+    this.stickerVelX = movedX * 0.7 + this.stickerVelX * 0.3;
+    this.stickerVelY = movedY * 0.7 + this.stickerVelY * 0.3;
+    this.syncWrapFromFloatingPreview();
+    const hasSurface = this.isStickerCenterOverSurface();
+    this.frontCenterHasSurface = hasSurface;
+    this.setFloatingPreviewOpacity(hasSurface ? this.stickerDragOpacity : this.stickerInvalidOpacity);
+
+    const lagX = this.stickerTargetPosition.x - mesh.position.x;
+    const leanX = THREE.MathUtils.clamp(
+      (this.stickerVelX + lagX * 0.18) / (this.stickerRestWidth * 0.08),
+      -0.38,
+      0.38,
+    );
+    const curl = THREE.MathUtils.clamp(
+      0.065 + Math.abs(lagX) / Math.max(this.stickerRestWidth * 4, 0.01),
+      0.045,
+      0.11,
+    );
+    this.deformFloatingPreview(curl, leanX, 0.045);
+  }
+
+  private syncWrapFromFloatingPreview(): void {
+    const mesh = this.floatingPreviewMesh;
+    if (!mesh) return;
+
+    const modelBox = new THREE.Box3().setFromObject(this.modelRoot);
+    const bw = Math.max(modelBox.max.x - modelBox.min.x, 0.01);
+    const bh = Math.max(modelBox.max.y - modelBox.min.y, 0.01);
+    this.wrapHorizontal = (mesh.position.x - modelBox.min.x) / bw;
+    this.wrapVertical = (mesh.position.y - modelBox.min.y) / bh;
+  }
+
+  // ── Paper Mario animations ─────────────────────────────
+
+  private animateStickerLift(): void {
+    const mesh = this.floatingPreviewMesh;
+    if (!mesh) return;
+    const startZ = mesh.position.z;
+    const targetZ = startZ + 0.10;
+    const start = performance.now();
+    const duration = 180;
+
+    const tick = () => {
+      const t = Math.min((performance.now() - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      if (this.floatingPreviewMesh) {
+        this.floatingPreviewMesh.position.z = THREE.MathUtils.lerp(startZ, targetZ, ease);
+        this.deformFloatingPreview(0.06 + ease * 0.04, 0, 0);
+      }
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  private animateStickerStamp(): Promise<void> {
+    return new Promise((resolve) => {
+      const mesh = this.floatingPreviewMesh;
+      if (!mesh) { resolve(); return; }
+
+      const startZ = mesh.position.z;
+      const modelBox = new THREE.Box3().setFromObject(this.modelRoot);
+      const targetZ = modelBox.max.z + 0.006;
+      const start = performance.now();
+      const duration = 300;
+
+      const tick = () => {
+        const t = Math.min((performance.now() - start) / duration, 1);
+
+        let ease: number;
+        if (t < 0.65) {
+          ease = Math.pow(t / 0.65, 2);
+        } else {
+          const sub = (t - 0.65) / 0.35;
+          ease = 1 + Math.sin(sub * Math.PI) * 0.05;
+        }
+
+        if (this.floatingPreviewMesh) {
+          this.floatingPreviewMesh.position.z = THREE.MathUtils.lerp(startZ, targetZ, Math.min(ease, 1));
+          const flatness = Math.min(t / 0.65, 1);
+          this.deformFloatingPreview((1 - flatness) * 0.06, 0, 0);
+          const squash = 1 - Math.sin(t * Math.PI) * 0.05;
+          this.floatingPreviewMesh.scale.y = squash;
+          this.floatingPreviewMesh.scale.x = 2 - squash;
+        }
+
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          if (this.floatingPreviewMesh) {
+            this.floatingPreviewMesh.scale.set(1, 1, 1);
+            this.deformFloatingPreview(0, 0, 0);
+          }
+          resolve();
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  private animateStickerReject(): Promise<void> {
+    return new Promise((resolve) => {
+      const mesh = this.floatingPreviewMesh;
+      if (!mesh) { resolve(); return; }
+
+      const baseZ = mesh.position.z;
+      const start = performance.now();
+      const duration = 400;
+
+      const tick = () => {
+        const t = Math.min((performance.now() - start) / duration, 1);
+        const wobble = Math.sin(t * Math.PI * 3.5) * Math.exp(-t * 5) * 0.18;
+
+        if (this.floatingPreviewMesh) {
+          this.floatingPreviewMesh.position.z = baseZ + wobble;
+          this.floatingPreviewMesh.rotation.z = Math.sin(t * Math.PI * 2.5) * Math.exp(-t * 4) * 0.06;
+          this.deformFloatingPreview(0.04 + Math.abs(wobble) * 0.6, 0, 0);
+        }
+
+        if (t < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          if (this.floatingPreviewMesh) {
+            this.floatingPreviewMesh.position.z = baseZ;
+            this.floatingPreviewMesh.rotation.z = 0;
+            this.deformFloatingPreview(0.035, 0, 0);
+          }
+          resolve();
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+  }
+
+  // ── Floating preview mesh ──────────────────────────────
+
+  private buildFloatingPreview(modelBox: THREE.Box3, projWidth: number, projHeight: number): void {
+    this.disposeFloatingPreview();
+    if (!this.wrapImage) return;
+
+    const cx = THREE.MathUtils.lerp(modelBox.min.x, modelBox.max.x, this.wrapHorizontal);
+    const cy = THREE.MathUtils.lerp(modelBox.min.y, modelBox.max.y, this.wrapVertical);
+    const cz = modelBox.max.z + this.floatingZOffset;
+
+    const geo = new THREE.PlaneGeometry(projWidth, projHeight, this.floatingSegX, this.floatingSegY);
+    const mat = new THREE.MeshBasicMaterial({
+      map: this.ensureWrapTexture(),
+      transparent: true,
+      opacity: 0,
+      alphaTest: 0.02,
+      depthTest: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -6,
+      polygonOffsetUnits: -6,
+      side: THREE.DoubleSide,
+    });
+
+    this.floatingPreviewMesh = new THREE.Mesh(geo, mat);
+    this.floatingPreviewMesh.name = 'floating-sticker-preview';
+    this.floatingPreviewMesh.renderOrder = 12;
+    this.floatingPreviewMesh.position.set(cx, cy, cz);
+    this.scene.add(this.floatingPreviewMesh);
+
+    this.stickerRestPosition.set(cx, cy, cz);
+    this.stickerTargetPosition.set(cx, cy, cz);
+    this.stickerRestWidth = projWidth;
+
+    this.deformFloatingPreview(0.035, 0, 0);
+
+    // Fade in
+    const mesh = this.floatingPreviewMesh;
+    const targetOpacity = this.stickerDefaultOpacity;
+    const start = performance.now();
+    const fadeDuration = 320;
+
+    const fadeIn = () => {
+      const t = Math.min((performance.now() - start) / fadeDuration, 1);
+      if (mesh.material) {
+        mesh.material.opacity = t * targetOpacity;
+        mesh.material.needsUpdate = true;
+      }
+      if (t < 1) requestAnimationFrame(fadeIn);
+    };
+    requestAnimationFrame(fadeIn);
+  }
+
+  private disposeFloatingPreview(): void {
+    if (!this.floatingPreviewMesh) return;
+    this.floatingPreviewMesh.geometry.dispose();
+    this.floatingPreviewMesh.material.dispose();
+    this.scene.remove(this.floatingPreviewMesh);
+    this.floatingPreviewMesh = undefined;
+  }
+
+  private deformFloatingPreview(curlAmount: number, leanX: number, liftZ: number): void {
+    const mesh = this.floatingPreviewMesh;
+    if (!mesh) return;
+
+    const geo = mesh.geometry;
+    const params = geo.parameters;
+    const segX = params.widthSegments;
+    const segY = params.heightSegments;
+    const w = params.width;
+    const h = params.height;
+    const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+
+    for (let yi = 0; yi <= segY; yi++) {
+      for (let xi = 0; xi <= segX; xi++) {
+        const i = yi * (segX + 1) + xi;
+        const u = xi / segX;
+        const v = yi / segY;
+
+        // Original flat position (PlaneGeometry: y inverted from iy)
+        const ox = (u - 0.5) * w;
+        const oy = (0.5 - v) * h;
+
+        // Edge factor: 1 at edge, 0 at center
+        const edgeDist = Math.min(u, 1 - u, v, 1 - v) * 4;
+        const edgeFactor = Math.max(0, 1 - edgeDist);
+
+        // Curl: edges push back in Z
+        const curlZ = -curlAmount * edgeFactor;
+
+        // Lean: top shifts in drag direction (v=0 is top)
+        const leanShiftX = leanX * (0.5 - v) * w * 0.6;
+
+        pos.setXYZ(i, ox + leanShiftX, oy, curlZ + liftZ);
+      }
+    }
+
+    pos.needsUpdate = true;
+    geo.computeVertexNormals();
+  }
+
+  // ── Screen ↔ world helpers ─────────────────────────────
+
+  private screenToWorldAtZ(screenX: number, screenY: number, worldZ: number): THREE.Vector3 | null {
+    const canvas = this.previewCanvas.nativeElement;
+    const w = Math.max(canvas.clientWidth, 1);
+    const h = Math.max(canvas.clientHeight, 1);
+    const ndcX = (screenX / w) * 2 - 1;
+    const ndcY = -(screenY / h) * 2 + 1;
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), -worldZ);
+    const target = new THREE.Vector3();
+    this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
+    return this.raycaster.ray.intersectPlane(plane, target) ? target : null;
+  }
+
+  private raycastScreen(
+    screenX: number,
+    screenY: number,
+    objects: THREE.Object3D[],
+  ): THREE.Intersection | undefined {
+    const canvas = this.previewCanvas.nativeElement;
+    const w = Math.max(canvas.clientWidth, 1);
+    const h = Math.max(canvas.clientHeight, 1);
+    const ndcX = (screenX / w) * 2 - 1;
+    const ndcY = -(screenY / h) * 2 + 1;
+    this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
+    return this.raycaster.intersectObjects(objects, false)[0];
+  }
+
+  // ── Bake ───────────────────────────────────────────────
+
+  private async runCalculatedBake(fastBake = false): Promise<void> {
+    const originalQuaternion = this.modelRoot.quaternion.clone();
+    const imageAspect = this.getImageAspect();
+    const xSegments = Math.max(40, this.wrapSegments);
+    const ySegments = Math.max(12, Math.round(this.wrapSegments / Math.max(imageAspect, 0.3)));
+    const yAxis = new THREE.Vector3(0, 1, 0);
+
+    try {
+      this.resetBake();
+      const targetMeshes = this.getWrapTargets();
+      const metrics = this.getFrontProjectionMetrics(targetMeshes);
+      const maxArc = Math.PI * 1.9;
+
+      const visMinU = THREE.MathUtils.clamp(this.frontVisibleMinU, 0, 1);
+      const visMaxU = THREE.MathUtils.clamp(this.frontVisibleMaxU, 0, 1);
+      const visCenter = (visMinU + visMaxU) * 0.5;
+
+      const centerAnchor = this.findFrontBakeAnchor(targetMeshes, metrics, visCenter);
+      const fallbackAnchor = this.findFrontBakeAnchor(targetMeshes, metrics, 0.5);
+
+      let anchorU: number;
+      let anchorAngle: number;
+      let radiansPerU: number;
+
+      if (centerAnchor && visMaxU - visMinU > 0.02) {
+        anchorU = visCenter;
+        anchorAngle = centerAnchor.angle;
+        const dz = Math.max(Math.abs(centerAnchor.point.z - metrics.modelCenter.z), 0.01);
+        radiansPerU = THREE.MathUtils.clamp(metrics.projectionWidth / dz, Math.PI / 20, maxArc);
+      } else {
+        const stickerRadius = Math.max(fallbackAnchor?.radius ?? metrics.radius, 0.1);
+        const halfSine = Math.min(metrics.projectionWidth / (2 * stickerRadius), 0.9999);
+        radiansPerU = THREE.MathUtils.clamp(2 * Math.asin(halfSine), Math.PI / 10, maxArc);
+        anchorU = 0.5;
+        anchorAngle = fallbackAnchor?.angle ?? 0;
+      }
+
+      let bakedAnyStrip = false;
+      this.bakeProgress.set(0);
+      this.statusMessage.set('Pegando sticker...');
+
+      for (let stripIndex = xSegments - 1; stripIndex >= 0; stripIndex--) {
+        const sourceMinU = stripIndex / xSegments;
+        const sourceMaxU = (stripIndex + 1) / xSegments;
+        const sourceMidU = (sourceMinU + sourceMaxU) * 0.5;
+        const stripAngle = anchorAngle + (sourceMidU - anchorU) * radiansPerU;
+        const rotationAngle = -stripAngle;
+
+        const targetQuaternion = new THREE.Quaternion().setFromAxisAngle(yAxis, rotationAngle);
+        targetQuaternion.multiply(originalQuaternion);
+        this.modelRoot.quaternion.copy(targetQuaternion);
+        this.modelRoot.updateMatrixWorld(true);
+
+        const progress = (xSegments - stripIndex) / xSegments;
+
+        // Fade out floating preview as bake progresses
+        if (this.floatingPreviewMesh) {
+          this.floatingPreviewMesh.material.opacity = Math.max(0, 1 - progress * 1.5) * this.wrapOpacity;
+          this.floatingPreviewMesh.material.needsUpdate = true;
+        }
+
+        this.bakeProgress.set(Math.round(progress * 100));
+
+        const result = this.buildStickerStripGeometry(targetMeshes, ySegments, metrics, {
+          sourceMinU,
+          sourceMaxU,
+          anchorU,
+          anchorAngle,
+          radiansPerU,
+        });
+
+        if (result.geometry.getAttribute('position').count > 0) {
+          this.accumulateGeometry(result.geometry);
+          bakedAnyStrip = true;
+
+          const shouldRebuild = !fastBake && (this.slowMoBake || stripIndex % 4 === 0 || stripIndex === 0);
+          if (shouldRebuild) {
+            this.rebuildBakedMesh();
+            this.statusMessage.set(`Pegando sticker ${xSegments - stripIndex}/${xSegments}`);
+            await this.waitBakeFrame();
+          }
+        }
+
+        result.geometry.dispose();
+      }
+
+      this.bakeProgress.set(100);
+      this.modelRoot.quaternion.copy(originalQuaternion);
+      this.modelRoot.updateMatrixWorld(true);
+
+      if (!bakedAnyStrip) {
+        this.statusMessage.set('La imagen no encontro superficie para hornear');
+        return;
+      }
+
+      this.rebuildBakedMesh();
+      this.disposeWrapMesh();
+      this.disposeFloatingPreview();
+      this.wrapOverflowsViewport.set(false);
+      this.stickerBaked.set(true);
+      this.bakeProgress.set(0);
+      this.statusMessage.set('Sticker horneado');
+    } catch (error) {
+      console.warn('Bake failed:', error);
+      this.modelRoot.quaternion.copy(originalQuaternion);
+      this.modelRoot.updateMatrixWorld(true);
+      this.statusMessage.set('No se pudo completar el horneado');
+    } finally {
+      this.isBaking.set(false);
+    }
+  }
+
+  private async waitBakeFrame(): Promise<void> {
+    const delay = this.slowMoBake ? Math.max(0, this.slowMoBakeDelay) : 0;
+    await new Promise<void>((resolve) => setTimeout(resolve, delay));
+  }
+
+  private accumulateGeometry(geo: THREE.BufferGeometry): void {
+    const posAttr = geo.getAttribute('position') as THREE.BufferAttribute;
+    const uvAttr = geo.getAttribute('uv') as THREE.BufferAttribute;
+    for (let i = 0; i < posAttr.count; i++) {
+      this.bakedPositions.push(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i));
+      this.bakedUvs.push(uvAttr.getX(i), uvAttr.getY(i));
+    }
+  }
+
+  private rebuildBakedMesh(): void {
+    this.disposeBakedMesh();
+    if (this.bakedPositions.length === 0) return;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(this.bakedPositions.slice(), 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(this.bakedUvs.slice(), 2));
+    geo.computeVertexNormals();
+    this.bakedMesh = new THREE.Mesh(geo, this.createShrinkWrapMaterial());
+    this.bakedMesh.name = 'ray-shrinkwrap-baked';
+    this.bakedMesh.renderOrder = 11;
+    this.modelRoot.add(this.bakedMesh);
+  }
+
+  private captureStudioRender(): string {
+    const originalBackground = this.scene.background;
+    const originalCameraPosition = this.camera.position.clone();
+    const originalCameraQuaternion = this.camera.quaternion.clone();
+    const originalFov = this.camera.fov;
+    const originalModelQuaternion = this.modelRoot.quaternion.clone();
+    const studio = new THREE.Group();
+
+    try {
+      this.modelRoot.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(this.modelRoot);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDimension = Math.max(size.x, size.y, size.z, 1);
+
+      const floor = new THREE.Mesh(
+        new THREE.PlaneGeometry(maxDimension * 4.6, maxDimension * 4.6),
+        new THREE.MeshStandardMaterial({ color: '#f3f7fa', roughness: 0.82, metalness: 0 }),
+      );
+      floor.name = 'render-studio-floor';
+      floor.rotation.x = -Math.PI * 0.5;
+      floor.position.set(center.x, box.min.y - 0.012, center.z);
+
+      const backdrop = new THREE.Mesh(
+        new THREE.PlaneGeometry(maxDimension * 4.6, maxDimension * 2.9),
+        new THREE.MeshBasicMaterial({ color: '#f8fbfd' }),
+      );
+      backdrop.name = 'render-studio-backdrop';
+      backdrop.position.set(center.x, center.y + maxDimension * 0.45, center.z - maxDimension * 1.45);
+
+      const shadow = new THREE.Mesh(
+        new THREE.CircleGeometry(maxDimension * 0.42, 72),
+        new THREE.MeshBasicMaterial({
+          color: '#162331',
+          transparent: true,
+          opacity: 0.10,
+          depthWrite: false,
+        }),
+      );
+      shadow.name = 'render-studio-shadow';
+      shadow.rotation.x = -Math.PI * 0.5;
+      shadow.scale.set(1.65, 0.62, 1);
+      shadow.position.set(center.x, box.min.y + 0.002, center.z + maxDimension * 0.06);
+      shadow.renderOrder = -1;
+
+      studio.userData['skipWrap'] = true;
+      studio.add(floor, backdrop, shadow);
+      this.scene.add(studio);
+      this.scene.background = new THREE.Color('#eef6fa');
+
+      const presentationTurn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -0.22);
+      this.modelRoot.quaternion.copy(originalModelQuaternion).premultiply(presentationTurn);
+      this.modelRoot.updateMatrixWorld(true);
+
+      this.camera.fov = 32;
+      this.camera.position.set(
+        center.x + maxDimension * 0.48,
+        center.y + maxDimension * 0.18,
+        center.z + maxDimension * 2.05,
+      );
+      this.camera.lookAt(center.x, center.y + maxDimension * 0.03, center.z);
+      this.camera.updateProjectionMatrix();
+
+      this.renderer.render(this.scene, this.camera);
+      return this.previewCanvas.nativeElement.toDataURL('image/png');
+    } finally {
+      this.scene.remove(studio);
+      this.disposeObject(studio);
+      this.scene.background = originalBackground;
+      this.modelRoot.quaternion.copy(originalModelQuaternion);
+      this.modelRoot.updateMatrixWorld(true);
+      this.camera.position.copy(originalCameraPosition);
+      this.camera.quaternion.copy(originalCameraQuaternion);
+      this.camera.fov = originalFov;
+      this.camera.updateProjectionMatrix();
+      this.renderer.render(this.scene, this.camera);
+    }
+  }
+
+  // ── Scene setup ────────────────────────────────────────
+
+  private initScene(): void {
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color('#edf6fb');
+
+    this.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+    this.camera.position.set(0, 1.7, 6);
+
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      canvas: this.previewCanvas.nativeElement,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: true,
+    });
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.setClearColor(0xedf6fb, 1);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+    const ambientLight = new THREE.HemisphereLight(0xffffff, 0xb8c6d6, 2.3);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.1);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    keyLight.position.set(3, 5, 5);
+    fillLight.position.set(-4, 2, 3);
+    this.scene.add(ambientLight, keyLight, fillLight, this.modelRoot);
+  }
+
+  private animate = (): void => {
+    this.frameId = requestAnimationFrame(this.animate);
+    const elapsed = (performance.now() - this.startTime) / 1000;
+    this.camera.position.x = Math.sin(elapsed * 0.12) * 0.03;
+
+    if (
+      this.floatingPreviewMesh &&
+      this.isDraggingSticker &&
+      !this.stickerAnimating &&
+      !this.isBaking() &&
+      !this.stickerBaked()
+    ) {
+      this.stepStickerDragLerp();
+    } else if (
+      this.floatingPreviewMesh &&
+      !this.isDraggingSticker &&
+      !this.stickerAnimating &&
+      !this.isBaking() &&
+      !this.stickerBaked()
+    ) {
+      this.floatingPreviewMesh.position.y = this.stickerRestPosition.y + Math.sin(elapsed * 1.25) * 0.018;
+      this.floatingPreviewMesh.rotation.z = Math.sin(elapsed * 0.75) * 0.011;
+    }
+
+    this.renderer.render(this.scene, this.camera);
+  };
+
+  private resizeRenderer(): void {
+    const host = this.canvasHost.nativeElement;
+    const width = Math.max(host.clientWidth, 1);
+    const height = Math.max(host.clientHeight, 1);
+    this.renderer.setSize(width, height, false);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+  }
+
+  // ── Model loading ──────────────────────────────────────
+
+  private async loadModelFromAsset(url: string): Promise<THREE.Object3D> {
+    const extension = url.split('.').pop()?.toLowerCase();
+    if (extension === 'glb' || extension === 'gltf') {
+      const gltf = await new GLTFLoader().loadAsync(url);
+      return gltf.scene;
+    }
+    if (extension === 'obj') return new OBJLoader().loadAsync(url);
+    if (extension === 'stl') {
+      const geometry = await new STLLoader().loadAsync(url);
+      geometry.computeVertexNormals();
+      return new THREE.Mesh(geometry, this.createBaseMaterial());
+    }
+    throw new Error(`Unsupported model extension: ${extension ?? 'unknown'}`);
+  }
+
+  private isProceduralModel(url: string): boolean {
+    return url.startsWith('procedural');
+  }
+
+  private createProceduralModel(url: string): THREE.Group {
+    switch (url) {
+      case 'procedural-box':
+        return this.createOpenBoxModel();
+      case 'procedural-mug':
+        return this.createMugModel();
+      case 'procedural-soccer':
+        return this.createSoccerBallModel();
+      default:
+        return this.createBottleModel();
+    }
+  }
+
+  private getSelectedModelLabel(): string {
+    return this.modelOptions.find((model) => model.url === this.selectedModelUrl)?.label ?? 'Modelo';
+  }
+
+  private createBottleModel(): THREE.Group {
+    const group = new THREE.Group();
+    const profile = [
+      new THREE.Vector2(0.33, 0),
+      new THREE.Vector2(0.51, 0.08),
+      new THREE.Vector2(0.58, 0.24),
+      new THREE.Vector2(0.55, 0.5),
+      new THREE.Vector2(0.48, 0.65),
+      new THREE.Vector2(0.47, 2.35),
+      new THREE.Vector2(0.34, 2.9),
+      new THREE.Vector2(0.23, 3.05),
+      new THREE.Vector2(0.22, 3.45),
+      new THREE.Vector2(0.33, 3.5),
+    ];
+    const bodyGeometry = new THREE.LatheGeometry(profile, 96);
+    bodyGeometry.computeVertexNormals();
+    const body = new THREE.Mesh(bodyGeometry, this.createBaseMaterial());
+    body.name = 'printable-bottle-body';
+
+    const capGeometry = new THREE.CylinderGeometry(0.38, 0.34, 0.5, 96);
+    const capMaterial = new THREE.MeshStandardMaterial({ color: '#b9bec3', metalness: 0.65, roughness: 0.22 });
+    const cap = new THREE.Mesh(capGeometry, capMaterial);
+    cap.name = 'metal-cap';
+    cap.position.y = 3.76;
+    cap.userData['skipWrap'] = true;
+
+    group.add(body, cap);
+    return group;
+  }
+
+  private createOpenBoxModel(): THREE.Group {
+    const group = new THREE.Group();
+    const cardboard = new THREE.MeshStandardMaterial({ color: '#c58d4f', metalness: 0, roughness: 0.72 });
+    const edge = new THREE.MeshStandardMaterial({ color: '#a66f38', metalness: 0, roughness: 0.78 });
+
+    const addPanel = (
+      name: string,
+      size: [number, number, number],
+      position: [number, number, number],
+      rotation: [number, number, number] = [0, 0, 0],
+      material: THREE.Material = cardboard,
+    ): THREE.Mesh => {
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(...size), material);
+      panel.name = name;
+      panel.position.set(...position);
+      panel.rotation.set(...rotation);
+      panel.userData['preserveMaterial'] = true;
+      group.add(panel);
+      return panel;
+    };
+
+    addPanel('box-bottom-printable', [2.15, 0.08, 1.55], [0, 0.04, 0]);
+    addPanel('box-front-printable', [2.15, 1.05, 0.08], [0, 0.58, 0.78]);
+    addPanel('box-back-printable', [2.15, 1.05, 0.08], [0, 0.58, -0.78]);
+    addPanel('box-left-printable', [0.08, 1.05, 1.55], [-1.08, 0.58, 0]);
+    addPanel('box-right-printable', [0.08, 1.05, 1.55], [1.08, 0.58, 0]);
+
+    addPanel('box-front-flap', [2.15, 0.58, 0.07], [0, 1.24, 1.05], [Math.PI * 0.34, 0, 0], edge);
+    addPanel('box-back-flap', [2.15, 0.58, 0.07], [0, 1.24, -1.05], [-Math.PI * 0.34, 0, 0], edge);
+    addPanel('box-left-flap', [0.07, 0.58, 1.55], [-1.35, 1.24, 0], [0, 0, -Math.PI * 0.34], edge);
+    addPanel('box-right-flap', [0.07, 0.58, 1.55], [1.35, 1.24, 0], [0, 0, Math.PI * 0.34], edge);
+
+    group.rotation.y = -0.35;
+    return group;
+  }
+
+  private createMugModel(): THREE.Group {
+    const group = new THREE.Group();
+    const ceramic = new THREE.MeshStandardMaterial({ color: '#fbfbf8', metalness: 0, roughness: 0.28 });
+
+    const bodyGeometry = new THREE.CylinderGeometry(0.78, 0.7, 1.65, 112, 2, true);
+    bodyGeometry.computeVertexNormals();
+    const body = new THREE.Mesh(bodyGeometry, ceramic);
+    body.name = 'printable-mug-body';
+    body.position.y = 0.86;
+    body.userData['preserveMaterial'] = true;
+
+    const bottomGeometry = new THREE.CylinderGeometry(0.68, 0.7, 0.08, 112);
+    const bottom = new THREE.Mesh(bottomGeometry, ceramic);
+    bottom.name = 'mug-bottom';
+    bottom.position.y = 0.04;
+    bottom.userData['preserveMaterial'] = true;
+
+    const lipGeometry = new THREE.TorusGeometry(0.76, 0.035, 16, 112);
+    const lip = new THREE.Mesh(lipGeometry, ceramic);
+    lip.name = 'mug-lip';
+    lip.position.y = 1.69;
+    lip.rotation.x = Math.PI * 0.5;
+    lip.userData['preserveMaterial'] = true;
+
+    const handleGeometry = new THREE.TorusGeometry(0.43, 0.065, 18, 72);
+    const handle = new THREE.Mesh(handleGeometry, ceramic);
+    handle.name = 'mug-handle';
+    handle.position.set(0.78, 0.92, 0);
+    handle.scale.set(0.72, 1.08, 0.72);
+    handle.rotation.y = Math.PI * 0.5;
+    handle.userData['preserveMaterial'] = true;
+
+    group.add(body, bottom, lip, handle);
+    group.rotation.y = -0.18;
+    return group;
+  }
+
+  private createSoccerBallModel(): THREE.Group {
+    const group = new THREE.Group();
+    const ballMaterial = new THREE.MeshStandardMaterial({ color: '#fafafa', metalness: 0, roughness: 0.38 });
+    const patchMaterial = new THREE.MeshStandardMaterial({ color: '#111111', metalness: 0, roughness: 0.48 });
+
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.95, 96, 48), ballMaterial);
+    ball.name = 'printable-soccer-ball';
+    ball.userData['preserveMaterial'] = true;
+    group.add(ball);
+
+    const patchNormals = [
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(0.64, 0.22, 0.74),
+      new THREE.Vector3(-0.64, 0.22, 0.74),
+      new THREE.Vector3(0.36, -0.58, 0.73),
+      new THREE.Vector3(-0.36, -0.58, 0.73),
+      new THREE.Vector3(0, 0.72, 0.69),
+    ];
+
+    for (const normal of patchNormals) {
+      const patch = new THREE.Mesh(new THREE.CircleGeometry(0.16, 5), patchMaterial);
+      normal.normalize();
+      patch.name = 'soccer-black-panel';
+      patch.position.copy(normal).multiplyScalar(0.958);
+      patch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+      patch.rotateZ(Math.PI / 5);
+      patch.userData['skipWrap'] = true;
+      group.add(patch);
+    }
+
+    group.rotation.y = -0.22;
+    return group;
+  }
+
+  private normalizeModel(): void {
+    this.modelRoot.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(this.modelRoot);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDimension = Math.max(size.x, size.y, size.z, 1);
+    const scale = size.y > 0 ? 3.85 / size.y : 3.2 / maxDimension;
+    this.modelRoot.scale.setScalar(scale);
+    this.modelRoot.updateMatrixWorld(true);
+
+    const scaledBox = new THREE.Box3().setFromObject(this.modelRoot);
+    const center = scaledBox.getCenter(new THREE.Vector3());
+    this.modelRoot.position.x -= center.x;
+    this.modelRoot.position.z -= center.z;
+    this.modelRoot.position.y -= scaledBox.min.y;
+    this.modelRoot.updateMatrixWorld(true);
+  }
+
+  private frameCamera(): void {
+    const box = new THREE.Box3().setFromObject(this.modelRoot);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDimension = Math.max(size.x, size.y, size.z, 1);
+    this.camera.position.set(0, center.y + maxDimension * 0.03, maxDimension * 2);
+    this.camera.lookAt(center.x, center.y, center.z);
+    this.camera.updateProjectionMatrix();
+  }
+
+  private applyBaseMaterials(): void {
+    this.modelRoot.traverse((object) => {
+      if (!this.isMesh(object)) return;
+      if (object.userData['skipWrap'] !== true) {
+        object.geometry.computeVertexNormals();
+        (object.geometry as BvhGeometry).computeBoundsTree?.();
+        if (object.userData['preserveMaterial'] !== true) {
+          object.material = this.createBaseMaterial();
+        }
+      }
+    });
+    this.applyObjectColor();
+  }
+
+  private applyObjectColor(): void {
+    const color = new THREE.Color(this.objectColor);
+    this.modelRoot.traverse((object) => {
+      if (
+        !this.isMesh(object) ||
+        object === this.wrapMesh ||
+        object === this.bakedMesh ||
+        object.userData['skipWrap'] === true
+      ) return;
+      const materials = Array.isArray(object.material) ? object.material : [object.material];
+      for (const material of materials) {
+        const coloredMaterial = material as THREE.Material & { color?: THREE.Color };
+        if (coloredMaterial.color instanceof THREE.Color) {
+          coloredMaterial.color.copy(color);
+          coloredMaterial.needsUpdate = true;
+        }
+      }
+    });
+  }
+
+  // ── Shrink wrap rebuild ────────────────────────────────
+
+  private rebuildShrinkWrap(skipFloatingPreview = false): void {
+    this.disposeWrapMesh();
+    this.frontCenterHasSurface = false;
+    if (!skipFloatingPreview) this.disposeFloatingPreview();
+
+    if (!this.wrapImage) return;
+
+    this.modelRoot.updateMatrixWorld(true);
+    const targetMeshes = this.getWrapTargets();
+    if (targetMeshes.length === 0) return;
+
+    const imageAspect = this.wrapImage.width / Math.max(this.wrapImage.height, 1);
+    const xSegments = this.wrapSegments;
+    const ySegments = Math.max(12, Math.round(this.wrapSegments / Math.max(imageAspect, 0.3)));
+
+    if (this.wrapMode === 'around') {
+      const geometry = this.buildRadialShrinkwrappedGeometry(targetMeshes, imageAspect, xSegments, ySegments);
+      this.wrapOverflowsViewport.set(false);
+      this.frontHasHorizontalOverflow = false;
+      this.frontCenterHasSurface = false;
+
+      if (geometry.getAttribute('position').count === 0) {
+        geometry.dispose();
+        this.statusMessage.set('La imagen no encontro superficie alrededor');
+        return;
+      }
+
+      this.wrapMesh = new THREE.Mesh(geometry, this.createShrinkWrapMaterial());
+      this.wrapMesh.name = 'ray-shrinkwrap-print';
+      this.wrapMesh.renderOrder = 10;
+      this.modelRoot.add(this.wrapMesh);
+    } else {
+      const result = this.buildFrontShrinkwrappedGeometry(targetMeshes, xSegments, ySegments);
+      this.frontVisibleMinU = result.visibleMinU;
+      this.frontVisibleMaxU = result.visibleMaxU;
+      this.frontHasHorizontalOverflow = result.horizontalOverflows;
+      this.frontCenterHasSurface = result.centerHit;
+      this.wrapOverflowsViewport.set(result.overflows);
+
+      const modelBox = new THREE.Box3().setFromObject(this.modelRoot);
+      const modelSize = modelBox.getSize(new THREE.Vector3());
+      const projWidth = Math.max(modelSize.x, modelSize.z) * (0.2 + this.wrapScale * 1.6);
+      const projHeight = projWidth / this.getImageAspect();
+
+      if (result.geometry.getAttribute('position').count === 0) {
+        result.geometry.dispose();
+        this.statusMessage.set('La imagen no encontro superficie al frente');
+        if (!skipFloatingPreview) this.buildFloatingPreview(modelBox, projWidth, projHeight);
+        return;
+      }
+
+      // wrapMesh is invisible — used only for logical calculations & bakeCurrentFrontProjection
+      this.wrapMesh = new THREE.Mesh(result.geometry, this.createShrinkWrapMaterial());
+      this.wrapMesh.name = 'ray-shrinkwrap-print';
+      this.wrapMesh.renderOrder = 10;
+      this.wrapMesh.visible = false;
+      this.modelRoot.add(this.wrapMesh);
+
+      if (!skipFloatingPreview) this.buildFloatingPreview(modelBox, projWidth, projHeight);
+    }
+  }
+
+  // ── Projection metrics ─────────────────────────────────
+
+  private getFrontProjectionMetrics(
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+  ): FrontProjectionMetrics {
+    const fullBox = new THREE.Box3().setFromObject(this.modelRoot);
+    const inverseRoot = this.modelRoot.matrixWorld.clone().invert();
+    const localBox = fullBox.clone().applyMatrix4(inverseRoot);
+
+    const modelBox = this.getLocalTargetBox(targetMeshes);
+    const modelSize = localBox.getSize(new THREE.Vector3());
+    const modelCenter = modelBox.getCenter(new THREE.Vector3());
+    const verticalCenter = THREE.MathUtils.lerp(localBox.min.y, localBox.max.y, this.wrapVertical);
+    const center = new THREE.Vector3(
+      THREE.MathUtils.lerp(localBox.min.x, localBox.max.x, this.wrapHorizontal),
+      verticalCenter,
+      localBox.max.z + Math.max(modelSize.z, 0.5),
+    );
+    const projectionWidth = Math.max(modelSize.x, modelSize.z) * (0.2 + this.wrapScale * 1.6);
+    const projectionHeight = projectionWidth / this.getImageAspect();
+    const radius = this.estimateRadiusAtY(targetMeshes, modelBox, verticalCenter);
+
+    return { projectionWidth, projectionHeight, center, modelCenter, radius };
+  }
+
+  private estimateRadiusAtY(
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+    modelBox: THREE.Box3,
+    y: number,
+  ): number {
+    const samples = 64;
+    const sz = modelBox.getSize(new THREE.Vector3());
+    const z = modelBox.max.z + Math.max(sz.z, 0.5);
+    const localDirection = new THREE.Vector3(0, 0, -1);
+    let minX = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY;
+
+    for (let index = 0; index <= samples; index++) {
+      const x = THREE.MathUtils.lerp(modelBox.min.x, modelBox.max.x, index / samples);
+      const worldOrigin = new THREE.Vector3(x, y, z);
+      const worldDirection = localDirection.clone();
+      this.modelRoot.localToWorld(worldOrigin);
+      worldDirection.transformDirection(this.modelRoot.matrixWorld);
+      this.raycaster.set(worldOrigin, worldDirection);
+      this.raycaster.far = Math.max(sz.x, sz.z) * 4 + 4;
+
+      const hit = this.raycaster.intersectObjects(targetMeshes, false)[0];
+      if (!hit) continue;
+
+      const localHit = hit.point.clone();
+      this.modelRoot.worldToLocal(localHit);
+      minX = Math.min(minX, localHit.x);
+      maxX = Math.max(maxX, localHit.x);
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(maxX) || maxX <= minX) {
+      return Math.max(sz.x, sz.z) * 0.5;
+    }
+    return Math.max((maxX - minX) * 0.5, 0.05);
+  }
+
+  private findFrontBakeAnchor(
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+    metrics: FrontProjectionMetrics,
+    u: number,
+  ): BakeAnchor | undefined {
+    const worldOrigin = new THREE.Vector3(
+      metrics.center.x + (u - 0.5) * metrics.projectionWidth,
+      metrics.center.y,
+      metrics.center.z,
+    );
+    const worldDirection = new THREE.Vector3(0, 0, -1);
+    this.modelRoot.localToWorld(worldOrigin);
+    worldDirection.transformDirection(this.modelRoot.matrixWorld);
+    this.raycaster.set(worldOrigin, worldDirection);
+    this.raycaster.far = Math.max(metrics.projectionWidth, metrics.projectionHeight, metrics.radius) * 4 + 4;
+
+    const hit = this.raycaster.intersectObjects(targetMeshes, false)[0];
+    if (!hit) return undefined;
+
+    const localPoint = hit.point.clone();
+    this.modelRoot.worldToLocal(localPoint);
+    const dx = localPoint.x - metrics.modelCenter.x;
+    const dz = localPoint.z - metrics.modelCenter.z;
+    const radius = Math.hypot(dx, dz);
+    if (radius <= 0.0001) return undefined;
+
+    return { angle: Math.atan2(dx, dz), radius, point: localPoint };
+  }
+
+  // ── Geometry builders ──────────────────────────────────
+
+  private ensureWrapTexture(): THREE.CanvasTexture {
+    if (this.wrapTexture) return this.wrapTexture;
+    this.wrapCanvas = document.createElement('canvas');
+    this.wrapCanvas.width = this.textureSize;
+    this.wrapCanvas.height = this.textureSize;
+    this.wrapTexture = new THREE.CanvasTexture(this.wrapCanvas);
+    this.wrapTexture.colorSpace = THREE.SRGBColorSpace;
+    return this.wrapTexture;
+  }
+
+  private redrawWrapTexture(): void {
+    const texture = this.ensureWrapTexture();
+    const canvas = this.wrapCanvas;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (this.wrapImage) {
+      const imageAspect = this.wrapImage.width / Math.max(this.wrapImage.height, 1);
+      const canvasAspect = canvas.width / canvas.height;
+      const drawWidth = imageAspect > canvasAspect ? canvas.width : canvas.height * imageAspect;
+      const drawHeight = imageAspect > canvasAspect ? canvas.width / imageAspect : canvas.height;
+      const drawX = (canvas.width - drawWidth) * 0.5;
+      const drawY = (canvas.height - drawHeight) * 0.5;
+      context.globalAlpha = this.wrapOpacity;
+      context.drawImage(this.wrapImage, drawX, drawY, drawWidth, drawHeight);
+      context.globalAlpha = 1;
+    }
+
+    texture.needsUpdate = true;
+  }
+
+  private buildFrontShrinkwrappedGeometry(
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+    xSegments: number,
+    ySegments: number,
+    options: FrontProjectionOptions = {},
+  ): FrontProjectionResult {
+    const sourceMinU = options.sourceMinU ?? 0;
+    const sourceMaxU = options.sourceMaxU ?? 1;
+    const placementMinU = options.placementMinU ?? 0;
+    const placementMaxU = options.placementMaxU ?? 1;
+    const modelBox = new THREE.Box3().setFromObject(this.modelRoot);
+    const modelSize = modelBox.getSize(new THREE.Vector3());
+    const modelCenter = modelBox.getCenter(new THREE.Vector3());
+    const projectionWidth = Math.max(modelSize.x, modelSize.z) * (0.2 + this.wrapScale * 1.6);
+    const projectionHeight = projectionWidth / this.getImageAspect();
+    const projectionCenter = new THREE.Vector3(
+      THREE.MathUtils.lerp(modelBox.min.x, modelBox.max.x, this.wrapHorizontal),
+      THREE.MathUtils.lerp(modelBox.min.y, modelBox.max.y, this.wrapVertical),
+      modelBox.max.z + Math.max(modelSize.z, 0.5),
+    );
+    const grid: ProjectedVertex[][] = [];
+    const far = Math.max(modelSize.x, modelSize.y, modelSize.z) * 3 + 2;
+    const worldDirection = new THREE.Vector3(0, 0, -1);
+    let visibleMinU = 1;
+    let visibleMaxU = 0;
+    let visibleMinV = 1;
+    let visibleMaxV = 0;
+    let hasHit = false;
+
+    this.raycaster.set(projectionCenter, worldDirection);
+    this.raycaster.far = far;
+    const centerHit = this.raycaster.intersectObjects(targetMeshes, false).length > 0;
+
+    for (let yIndex = 0; yIndex <= ySegments; yIndex++) {
+      const row: ProjectedVertex[] = [];
+      const v = yIndex / ySegments;
+
+      for (let xIndex = 0; xIndex <= xSegments; xIndex++) {
+        const segmentU = xIndex / xSegments;
+        const placementU = THREE.MathUtils.lerp(placementMinU, placementMaxU, segmentU);
+        const sourceU = THREE.MathUtils.lerp(sourceMinU, sourceMaxU, segmentU);
+        const worldOrigin = new THREE.Vector3(
+          projectionCenter.x + (placementU - 0.5) * projectionWidth,
+          projectionCenter.y + (v - 0.5) * projectionHeight,
+          projectionCenter.z,
+        );
+        this.raycaster.set(worldOrigin, worldDirection);
+        this.raycaster.far = far;
+
+        const hit = this.raycaster.intersectObjects(targetMeshes, false)[0];
+
+        if (!hit) {
+          const localMiss = worldOrigin.clone();
+          this.modelRoot.worldToLocal(localMiss);
+          row.push({ hit: false, position: localMiss, uv: new THREE.Vector2(sourceU, v) });
+          continue;
+        }
+
+        hasHit = true;
+        visibleMinU = Math.min(visibleMinU, sourceU);
+        visibleMaxU = Math.max(visibleMaxU, sourceU);
+        visibleMinV = Math.min(visibleMinV, v);
+        visibleMaxV = Math.max(visibleMaxV, v);
+
+        const normal = hit.face
+          ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
+          : hit.point.clone().sub(modelCenter).normalize();
+        const liftedPoint = hit.point.clone().addScaledVector(normal, this.wrapOffset);
+        const localPoint = liftedPoint.clone();
+        this.modelRoot.worldToLocal(localPoint);
+        row.push({ hit: true, position: localPoint, uv: new THREE.Vector2(sourceU, v) });
+      }
+
+      grid.push(row);
+    }
+
+    if (!hasHit) {
+      visibleMinU = 0; visibleMaxU = 0;
+      visibleMinV = 0; visibleMaxV = 0;
+    }
+
+    const leftOverflow = hasHit && visibleMinU > this.overflowThreshold;
+    const rightOverflow = hasHit && visibleMaxU < 1 - this.overflowThreshold;
+    const bottomOverflow = hasHit && visibleMinV > this.overflowThreshold;
+    const topOverflow = hasHit && visibleMaxV < 1 - this.overflowThreshold;
+
+    const positions: number[] = [];
+    const uvs: number[] = [];
+
+    for (let yIndex = 0; yIndex < ySegments; yIndex++) {
+      for (let xIndex = 0; xIndex < xSegments; xIndex++) {
+        const a = grid[yIndex][xIndex];
+        const b = grid[yIndex][xIndex + 1];
+        const c = grid[yIndex + 1][xIndex];
+        const d = grid[yIndex + 1][xIndex + 1];
+        this.pushTriangleIfProjected(a, b, c, positions, uvs);
+        this.pushTriangleIfProjected(b, d, c, positions, uvs);
+      }
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.computeVertexNormals();
+
+    return {
+      geometry,
+      overflows: leftOverflow || rightOverflow || bottomOverflow || topOverflow,
+      horizontalOverflows: leftOverflow || rightOverflow,
+      verticalOverflows: bottomOverflow || topOverflow,
+      centerHit,
+      visibleMinU,
+      visibleMaxU,
+      visibleMinV,
+      visibleMaxV,
+    };
+  }
+
+  private buildStickerStripGeometry(
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+    ySegments: number,
+    metrics: FrontProjectionMetrics,
+    options: StickerStripOptions,
+  ): { geometry: THREE.BufferGeometry } {
+    const rayRadius = metrics.radius + Math.max(metrics.projectionWidth, metrics.projectionHeight) + 1;
+    const far = rayRadius * 2 + metrics.radius * 2 + 2;
+    const yMin = metrics.center.y - metrics.projectionHeight * 0.5;
+    const yMax = metrics.center.y + metrics.projectionHeight * 0.5;
+    const grid: ProjectedVertex[][] = [];
+
+    for (let yIndex = 0; yIndex <= ySegments; yIndex++) {
+      const row: ProjectedVertex[] = [];
+      const v = yIndex / ySegments;
+      const y = THREE.MathUtils.lerp(yMin, yMax, v);
+
+      for (const u of [options.sourceMinU, options.sourceMaxU]) {
+        const angle = options.anchorAngle + (u - options.anchorU) * options.radiansPerU;
+        const radial = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+        const localOrigin = new THREE.Vector3(
+          metrics.modelCenter.x + radial.x * rayRadius,
+          y,
+          metrics.modelCenter.z + radial.z * rayRadius,
+        );
+        const localDirection = new THREE.Vector3(
+          metrics.modelCenter.x - localOrigin.x,
+          0,
+          metrics.modelCenter.z - localOrigin.z,
+        ).normalize();
+        const worldOrigin = localOrigin.clone();
+        const worldDirection = localDirection.clone();
+        this.modelRoot.localToWorld(worldOrigin);
+        worldDirection.transformDirection(this.modelRoot.matrixWorld);
+        this.raycaster.set(worldOrigin, worldDirection);
+        this.raycaster.far = far;
+
+        const hit = this.raycaster.intersectObjects(targetMeshes, false)[0];
+
+        if (!hit) {
+          row.push({ hit: false, position: localOrigin, uv: new THREE.Vector2(u, v) });
+          continue;
+        }
+
+        const normal = hit.face
+          ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
+          : hit.point.clone().sub(worldOrigin).normalize().negate();
+        const liftedPoint = hit.point.clone().addScaledVector(normal, this.wrapOffset);
+        const localPoint = liftedPoint.clone();
+        this.modelRoot.worldToLocal(localPoint);
+        row.push({ hit: true, position: localPoint, uv: new THREE.Vector2(u, v) });
+      }
+
+      grid.push(row);
+    }
+
+    const positions: number[] = [];
+    const uvs: number[] = [];
+
+    for (let yIndex = 0; yIndex < ySegments; yIndex++) {
+      const a = grid[yIndex][0];
+      const b = grid[yIndex][1];
+      const c = grid[yIndex + 1][0];
+      const d = grid[yIndex + 1][1];
+      this.pushTriangleIfProjected(a, b, c, positions, uvs);
+      this.pushTriangleIfProjected(b, d, c, positions, uvs);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.computeVertexNormals();
+    return { geometry };
+  }
+
+  private buildRadialShrinkwrappedGeometry(
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+    imageAspect: number,
+    xSegments: number,
+    ySegments: number,
+  ): THREE.BufferGeometry {
+    const modelBox = this.getLocalTargetBox(targetMeshes);
+    const modelSize = modelBox.getSize(new THREE.Vector3());
+    const modelCenter = modelBox.getCenter(new THREE.Vector3());
+    const radius = Math.max(modelSize.x, modelSize.z) * 0.75 + 0.75;
+    const far = radius * 2 + Math.max(modelSize.x, modelSize.z) + 2;
+    const normalizedScale = THREE.MathUtils.clamp((this.wrapScale - 0.08) / 0.92, 0, 1);
+    const angularSpan = THREE.MathUtils.lerp(Math.PI / 8, Math.PI * 2, normalizedScale);
+    const centerAngle = THREE.MathUtils.lerp(-Math.PI, Math.PI, this.wrapHorizontal);
+    const projectionWidth = Math.max(modelSize.x, modelSize.z) * (0.2 + this.wrapScale * 1.6);
+    const projectionHeight = Math.min(modelSize.y, projectionWidth / imageAspect);
+    const verticalCenter = THREE.MathUtils.lerp(modelBox.min.y, modelBox.max.y, this.wrapVertical);
+    const yMin = verticalCenter - projectionHeight * 0.5;
+    const yMax = verticalCenter + projectionHeight * 0.5;
+    const grid: ProjectedVertex[][] = [];
+
+    for (let yIndex = 0; yIndex <= ySegments; yIndex++) {
+      const row: ProjectedVertex[] = [];
+      const v = yIndex / ySegments;
+      const y = THREE.MathUtils.lerp(yMin, yMax, v);
+
+      for (let xIndex = 0; xIndex <= xSegments; xIndex++) {
+        const u = xIndex / xSegments;
+        const angle = centerAngle + (u - 0.5) * angularSpan;
+        const radial = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+        const localOrigin = new THREE.Vector3(
+          modelCenter.x + radial.x * radius,
+          y,
+          modelCenter.z + radial.z * radius,
+        );
+        const localDirection = new THREE.Vector3(
+          modelCenter.x - localOrigin.x,
+          0,
+          modelCenter.z - localOrigin.z,
+        ).normalize();
+        const worldOrigin = localOrigin.clone();
+        const worldDirection = localDirection.clone();
+        this.modelRoot.localToWorld(worldOrigin);
+        worldDirection.transformDirection(this.modelRoot.matrixWorld);
+        this.raycaster.set(worldOrigin, worldDirection);
+        this.raycaster.far = far;
+
+        const hit = this.raycaster.intersectObjects(targetMeshes, false)[0];
+
+        if (!hit) {
+          row.push({ hit: false, position: localOrigin, uv: new THREE.Vector2(u, v) });
+          continue;
+        }
+
+        const normal = hit.face
+          ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
+          : hit.point.clone().sub(worldOrigin).normalize().negate();
+        const liftedPoint = hit.point.clone().addScaledVector(normal, this.wrapOffset);
+        const localPoint = liftedPoint.clone();
+        this.modelRoot.worldToLocal(localPoint);
+        row.push({ hit: true, position: localPoint, uv: new THREE.Vector2(u, v) });
+      }
+
+      grid.push(row);
+    }
+
+    const positions: number[] = [];
+    const uvs: number[] = [];
+
+    for (let yIndex = 0; yIndex < ySegments; yIndex++) {
+      for (let xIndex = 0; xIndex < xSegments; xIndex++) {
+        const a = grid[yIndex][xIndex];
+        const b = grid[yIndex][xIndex + 1];
+        const c = grid[yIndex + 1][xIndex];
+        const d = grid[yIndex + 1][xIndex + 1];
+        this.pushTriangleIfProjected(a, b, c, positions, uvs);
+        this.pushTriangleIfProjected(b, d, c, positions, uvs);
+      }
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geometry.computeVertexNormals();
+    return geometry;
+  }
+
+  private pushTriangleIfProjected(
+    a: ProjectedVertex,
+    b: ProjectedVertex,
+    c: ProjectedVertex,
+    positions: number[],
+    uvs: number[],
+  ): void {
+    if (!a.hit || !b.hit || !c.hit) return;
+    for (const vertex of [a, b, c]) {
+      positions.push(vertex.position.x, vertex.position.y, vertex.position.z);
+      uvs.push(vertex.uv.x, vertex.uv.y);
+    }
+  }
+
+  // ── Scene helpers ──────────────────────────────────────
+
+  private getWrapTargets(): THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[] {
+    const meshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[] = [];
+    this.modelRoot.traverse((object) => {
+      if (
+        this.isMesh(object) &&
+        object !== this.wrapMesh &&
+        object !== this.bakedMesh &&
+        object.userData['skipWrap'] !== true
+      ) {
+        meshes.push(object);
+      }
+    });
+    return meshes;
+  }
+
+  private getLocalTargetBox(
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+  ): THREE.Box3 {
+    const box = new THREE.Box3();
+    const inverseRootMatrix = this.modelRoot.matrixWorld.clone().invert();
+    const relativeMatrix = new THREE.Matrix4();
+
+    for (const mesh of targetMeshes) {
+      mesh.geometry.computeBoundingBox();
+      if (!mesh.geometry.boundingBox) continue;
+      relativeMatrix.multiplyMatrices(inverseRootMatrix, mesh.matrixWorld);
+      box.union(mesh.geometry.boundingBox.clone().applyMatrix4(relativeMatrix));
+    }
+
+    return box.isEmpty() ? new THREE.Box3().setFromObject(this.modelRoot) : box;
+  }
+
+  private getImageAspect(): number {
+    return this.wrapImage ? this.wrapImage.width / Math.max(this.wrapImage.height, 1) : 1;
+  }
+
+  private createBaseMaterial(): THREE.MeshStandardMaterial {
+    return new THREE.MeshStandardMaterial({ color: '#f8faf8', metalness: 0, roughness: 0.34 });
+  }
+
+  private createShrinkWrapMaterial(): THREE.MeshBasicMaterial {
+    return new THREE.MeshBasicMaterial({
+      map: this.ensureWrapTexture(),
+      transparent: true,
+      opacity: this.wrapOpacity,
+      alphaTest: 0.03,
+      depthTest: true,
+      depthWrite: false,
+      polygonOffset: true,
+      polygonOffsetFactor: -4,
+      polygonOffsetUnits: -4,
+      side: THREE.DoubleSide,
+    });
+  }
+
+  private rotateGlobal(axis: Axis, radians: number): void {
+    const vector =
+      axis === 'x'
+        ? new THREE.Vector3(1, 0, 0)
+        : axis === 'y'
+          ? new THREE.Vector3(0, 1, 0)
+          : new THREE.Vector3(0, 0, 1);
+    const rotation = new THREE.Quaternion().setFromAxisAngle(vector, radians);
+    this.modelRoot.quaternion.premultiply(rotation);
+  }
+
+  private clearModel(): void {
+    this.wrapMesh = undefined;
+    this.bakedMesh = undefined;
+    this.bakedPositions = [];
+    this.bakedUvs = [];
+    this.stickerBaked.set(false);
+    this.renderImageUrl.set(null);
+    this.disposeFloatingPreview();
+    for (const child of [...this.modelRoot.children]) {
+      this.disposeObject(child);
+      this.modelRoot.remove(child);
+    }
+    this.modelRoot.scale.setScalar(1);
+    this.modelRoot.position.set(0, 0, 0);
+  }
+
+  private disposeWrapMesh(): void {
+    if (!this.wrapMesh) return;
+    this.wrapMesh.geometry.dispose();
+    this.wrapMesh.material.dispose();
+    this.modelRoot.remove(this.wrapMesh);
+    this.wrapMesh = undefined;
+  }
+
+  private disposeBakedMesh(): void {
+    if (!this.bakedMesh) return;
+    this.bakedMesh.geometry.dispose();
+    this.bakedMesh.material.dispose();
+    this.modelRoot.remove(this.bakedMesh);
+    this.bakedMesh = undefined;
+  }
+
+  private resetBake(): void {
+    this.disposeBakedMesh();
+    this.bakedPositions = [];
+    this.bakedUvs = [];
+    this.stickerBaked.set(false);
+    this.renderImageUrl.set(null);
+  }
+
+  private disposeObject(object: THREE.Object3D): void {
+    object.traverse((child) => {
+      if (!this.isMesh(child)) return;
+      (child.geometry as BvhGeometry).disposeBoundsTree?.();
+      child.geometry.dispose();
+      const materials = Array.isArray(child.material) ? child.material : [child.material];
+      for (const material of materials) material.dispose();
+    });
+  }
+
+  private isMesh(
+    object: THREE.Object3D,
+  ): object is THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]> {
+    return (object as THREE.Mesh).isMesh === true;
+  }
+}
