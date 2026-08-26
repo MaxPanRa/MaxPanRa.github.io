@@ -3,13 +3,18 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  HostBinding,
   NgZone,
   OnDestroy,
   ViewChild,
+  effect,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { gsap } from 'gsap';
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
@@ -23,10 +28,39 @@ type ModelOption = { label: string; url: string };
 type Axis = 'x' | 'y' | 'z';
 type WrapMode = 'front' | 'around';
 
-type ProjectedVertex = {
+/** Una muestra de rayo: el vertice proyectado sobre la malla, o el fallo. */
+type RaySample = {
   hit: boolean;
+  /** Posicion local al modelRoot, ya separada de la superficie. */
   position: THREE.Vector3;
   uv: THREE.Vector2;
+  /** Distancia recorrida por el rayo hasta la superficie. */
+  depth: number;
+};
+
+/**
+ * Campo de proyeccion: convierte parametros de rejilla (gu, gv) en [0,1]
+ * en un rayo en espacio mundo y en su coordenada de textura.
+ * Frontal, radial y tira de horneado solo se diferencian en esto.
+ */
+type ProjectionField = {
+  ray(gu: number, gv: number, origin: THREE.Vector3, direction: THREE.Vector3): void;
+  uv(gu: number, gv: number, out: THREE.Vector2): void;
+  far: number;
+  /** Separacion de la lamina respecto de la superficie. */
+  lift: number;
+  /** Salto de profundidad maximo dentro de una celda antes de considerarla un puente. */
+  depthTolerance: number;
+};
+
+type ProjectedSurface = {
+  positions: number[];
+  uvs: number[];
+  hasHit: boolean;
+  minGu: number;
+  maxGu: number;
+  minGv: number;
+  maxGv: number;
 };
 
 type FrontProjectionOptions = {
@@ -84,11 +118,29 @@ type BvhGeometry = THREE.BufferGeometry & {
 export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
   @ViewChild('canvasHost', { static: true }) private canvasHost!: ElementRef<HTMLDivElement>;
   @ViewChild('previewCanvas', { static: true }) private previewCanvas!: ElementRef<HTMLCanvasElement>;
+  @ViewChild('segThumb', { static: true }) private segThumb!: ElementRef<HTMLElement>;
+  @ViewChild('statusReadout', { static: true }) private statusReadout!: ElementRef<HTMLElement>;
+
+  private readonly warnChip = viewChild<ElementRef<HTMLElement>>('warnChip');
+  private readonly renderCard = viewChild<ElementRef<HTMLElement>>('renderCard');
+  private readonly renderShade = viewChild<ElementRef<HTMLElement>>('renderShade');
 
   readonly modelOptions: ModelOption[] = [
+    { label: 'Taza', url: 'procedural-mug-studio' },
+    { label: 'Balón', url: 'procedural-ball' },
+    { label: 'Caja', url: 'procedural-carton' },
+    { label: 'Bidón', url: 'procedural-jerrycan' },
+    { label: 'Pouch', url: 'procedural-pouch' },
+  ];
+
+  /**
+   * Modelos ocultos del selector pero vivos: se siguen cargando por url.
+   * Los procedurales pasan por createProceduralModel, los de archivo por assets.
+   */
+  readonly hiddenModelOptions: ModelOption[] = [
     { label: 'Botella de prueba', url: 'procedural' },
     { label: 'Caja abierta', url: 'procedural-box' },
-    { label: 'Taza', url: 'procedural-mug' },
+    { label: 'Taza (anterior)', url: 'procedural-mug' },
     { label: 'Pelota de futbol', url: 'procedural-soccer' },
     { label: '1', url: '/assets/models/1.stl' },
     { label: '2', url: '/assets/models/2.glb' },
@@ -118,9 +170,25 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
   // ── Three.js core ──────────────────────────────────────
   private readonly modelRoot = new THREE.Group();
   private readonly textureSize = 2048;
-  private readonly wrapOffset = 0.012;
   private readonly wrapSegments = 88;
   private readonly overflowThreshold = 0.012;
+  /** Separacion de la lamina, en fraccion del tamano del modelo. */
+  private readonly wrapLiftRatio = 0.0032;
+  /**
+   * Coseno minimo entre el rayo y la normal de la cara. Por debajo, el rayo
+   * roza la superficie y la imagen se estiraria mas de ~5.5x: se descarta.
+   */
+  private readonly wrapGrazingLimit = 0.18;
+  /** Salto de profundidad admitido dentro de una celda, en anchos de celda. */
+  private readonly wrapDepthTolerance = 10;
+  /** Bisecciones por arista para encontrar la silueta real. */
+  private readonly wrapEdgeRefineSteps = 5;
+
+  // Vectores de trabajo: una proyeccion lanza miles de rayos por reconstruccion
+  private readonly scratchOrigin = new THREE.Vector3();
+  private readonly scratchDirection = new THREE.Vector3();
+  private readonly scratchFaceNormal = new THREE.Vector3();
+  private readonly scratchLift = new THREE.Vector3();
   private readonly raycaster = new THREE.Raycaster();
   private readonly startTime = performance.now();
   private camera!: THREE.PerspectiveCamera;
@@ -165,7 +233,40 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
   private readonly stickerDragOpacity = 0.9;
   private readonly stickerInvalidOpacity = 0.7;
 
-  constructor(private readonly ngZone: NgZone) {}
+  // ── Motion (GSAP) ──────────────────────────────────────
+  /** Sin movimiento decorativo: cada animacion responde a un cambio de estado real. */
+  @HostBinding('class.no-motion') protected readonly reduceMotion =
+    typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  private gsapCtx?: gsap.Context;
+
+  constructor(
+    private readonly ngZone: NgZone,
+    private readonly hostRef: ElementRef<HTMLElement>,
+  ) {
+    // Cambio de estado -> lectura nueva en la barra de estado
+    effect(() => {
+      this.statusMessage();
+      this.flashStatusReadout();
+    });
+
+    // El aviso de encuadre entra desde el filo del visor
+    effect(() => {
+      const chip = this.warnChip();
+      if (chip) this.revealWarning(chip.nativeElement);
+    });
+
+    // El horneado termino: las escuadras confirman el encuadre congelado
+    effect(() => {
+      if (this.stickerBaked()) this.confirmFrameLock();
+    });
+
+    // Apertura del render exportado
+    effect(() => {
+      const shade = this.renderShade();
+      const card = this.renderCard();
+      if (shade && card) this.openRenderOverlay(shade.nativeElement, card.nativeElement);
+    });
+  }
 
   ngAfterViewInit(): void {
     this.initScene();
@@ -175,12 +276,14 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
       this.resizeRenderer();
       this.animate();
     });
+    this.initMotion();
     void this.loadSelectedModel();
   }
 
   ngOnDestroy(): void {
     cancelAnimationFrame(this.frameId);
     this.resizeObserver?.disconnect();
+    this.gsapCtx?.revert();
     this.clearModel();
     this.wrapTexture?.dispose();
     this.renderer?.dispose();
@@ -260,6 +363,13 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
     reader.readAsDataURL(file);
   }
 
+  setWrapMode(mode: WrapMode): void {
+    if (this.wrapMode === mode) return;
+    this.wrapMode = mode;
+    this.syncProjectionThumb();
+    this.updateWrap();
+  }
+
   updateWrap(): void {
     if (this.stickerBaked()) return;
     if (!this.isBaking()) this.resetBake();
@@ -302,7 +412,104 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
   }
 
   closeRenderPreview(): void {
-    this.renderImageUrl.set(null);
+    const shade = this.renderShade()?.nativeElement;
+    if (this.reduceMotion || !shade) {
+      this.renderImageUrl.set(null);
+      return;
+    }
+
+    this.ngZone.runOutsideAngular(() => {
+      gsap.to(shade, {
+        opacity: 0,
+        duration: 0.2,
+        ease: 'power2.in',
+        overwrite: true,
+        onComplete: () => this.ngZone.run(() => this.renderImageUrl.set(null)),
+      });
+    });
+  }
+
+  // ── Movimiento ─────────────────────────────────────────
+
+  /** Arranque del equipo: primero se dibujan los filos del chasis, despues entran los modulos. */
+  private initMotion(): void {
+    this.syncProjectionThumb(false);
+    if (this.reduceMotion) return;
+
+    this.ngZone.runOutsideAngular(() => {
+      this.gsapCtx = gsap.context(() => {
+        gsap
+          .timeline({ defaults: { ease: 'power3.out' } })
+          .from('.js-rule', { scaleX: 0, scaleY: 0, duration: 0.5, stagger: 0.08 })
+          .from('.js-boot', { y: 8, opacity: 0, duration: 0.45, stagger: 0.06 }, '-=0.3')
+          .from('.js-frame', { opacity: 0, duration: 0.4, stagger: 0.05 }, '-=0.35');
+      }, this.hostRef.nativeElement);
+    });
+  }
+
+  /** El indicador del selector viaja al modo elegido: es la confirmacion del cambio. */
+  private syncProjectionThumb(animated = true): void {
+    const thumb = this.segThumb?.nativeElement;
+    if (!thumb) return;
+
+    const xPercent = this.wrapMode === 'around' ? 100 : 0;
+    if (!animated || this.reduceMotion) {
+      gsap.set(thumb, { xPercent });
+      return;
+    }
+
+    this.ngZone.runOutsideAngular(() => {
+      gsap.to(thumb, { xPercent, duration: 0.42, ease: 'expo.out', overwrite: true });
+    });
+  }
+
+  private flashStatusReadout(): void {
+    const el = this.statusReadout?.nativeElement;
+    if (!el || this.reduceMotion) return;
+
+    this.ngZone.runOutsideAngular(() => {
+      gsap.fromTo(
+        el,
+        { yPercent: 60, opacity: 0 },
+        { yPercent: 0, opacity: 1, duration: 0.32, ease: 'power3.out', overwrite: true },
+      );
+    });
+  }
+
+  private revealWarning(chip: HTMLElement): void {
+    this.runAfterRender(() => {
+      gsap.from(chip, { y: -8, opacity: 0, duration: 0.35, ease: 'power3.out' });
+    });
+  }
+
+  private confirmFrameLock(): void {
+    this.runAfterRender(() => {
+      gsap.fromTo(
+        this.hostRef.nativeElement.querySelectorAll('.js-frame'),
+        { scale: 1.6, opacity: 0.25 },
+        { scale: 1, opacity: 1, duration: 0.55, ease: 'expo.out', stagger: 0.04 },
+      );
+    });
+  }
+
+  private openRenderOverlay(shade: HTMLElement, card: HTMLElement): void {
+    this.runAfterRender(() => {
+      gsap
+        .timeline()
+        .to(shade, { opacity: 1, duration: 0.22, ease: 'power2.out' })
+        .from(card, { y: 16, scale: 0.99, opacity: 0, duration: 0.5, ease: 'expo.out' }, 0.05);
+    });
+  }
+
+  /** Los efectos pueden dispararse antes de que Angular escriba el DOM: se espera un cuadro. */
+  private runAfterRender(fn: () => void): void {
+    if (this.reduceMotion) return;
+    this.ngZone.runOutsideAngular(() => {
+      requestAnimationFrame(() => {
+        if (this.gsapCtx) this.gsapCtx.add(fn);
+        else fn();
+      });
+    });
   }
 
   onPointerDown(event: PointerEvent): void {
@@ -891,7 +1098,7 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
 
       const floor = new THREE.Mesh(
         new THREE.PlaneGeometry(maxDimension * 4.6, maxDimension * 4.6),
-        new THREE.MeshStandardMaterial({ color: '#f3f7fa', roughness: 0.82, metalness: 0 }),
+        new THREE.MeshStandardMaterial({ color: '#15181a', roughness: 0.86, metalness: 0 }),
       );
       floor.name = 'render-studio-floor';
       floor.rotation.x = -Math.PI * 0.5;
@@ -899,7 +1106,7 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
 
       const backdrop = new THREE.Mesh(
         new THREE.PlaneGeometry(maxDimension * 4.6, maxDimension * 2.9),
-        new THREE.MeshBasicMaterial({ color: '#f8fbfd' }),
+        new THREE.MeshBasicMaterial({ color: '#101315' }),
       );
       backdrop.name = 'render-studio-backdrop';
       backdrop.position.set(center.x, center.y + maxDimension * 0.45, center.z - maxDimension * 1.45);
@@ -907,9 +1114,9 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
       const shadow = new THREE.Mesh(
         new THREE.CircleGeometry(maxDimension * 0.42, 72),
         new THREE.MeshBasicMaterial({
-          color: '#162331',
+          color: '#05070a',
           transparent: true,
-          opacity: 0.10,
+          opacity: 0.42,
           depthWrite: false,
         }),
       );
@@ -922,7 +1129,7 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
       studio.userData['skipWrap'] = true;
       studio.add(floor, backdrop, shadow);
       this.scene.add(studio);
-      this.scene.background = new THREE.Color('#eef6fa');
+      // El fondo de escena ya es el ciclorama; el backdrop físico da el suelo y el horizonte.
 
       const presentationTurn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -0.22);
       this.modelRoot.quaternion.copy(originalModelQuaternion).premultiply(presentationTurn);
@@ -957,7 +1164,8 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
 
   private initScene(): void {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#edf6fb');
+    // Fondo plano de visor tecnico: la retícula la dibuja la interfaz encima del canvas.
+    this.scene.background = new THREE.Color('#0b0d0e');
 
     this.camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
     this.camera.position.set(0, 1.7, 6);
@@ -969,10 +1177,10 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
       preserveDrawingBuffer: true,
     });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-    this.renderer.setClearColor(0xedf6fb, 1);
+    this.renderer.setClearColor(0x0b0d0e, 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 
-    const ambientLight = new THREE.HemisphereLight(0xffffff, 0xb8c6d6, 2.3);
+    const ambientLight = new THREE.HemisphereLight(0xeef3fb, 0x2a3038, 2.3);
     const keyLight = new THREE.DirectionalLight(0xffffff, 2.1);
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.9);
     keyLight.position.set(3, 5, 5);
@@ -1039,6 +1247,17 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
 
   private createProceduralModel(url: string): THREE.Group {
     switch (url) {
+      case 'procedural-mug-studio':
+        return this.createStudioMugModel();
+      case 'procedural-ball':
+        return this.createSportBallModel();
+      case 'procedural-carton':
+        return this.createCartonModel();
+      case 'procedural-jerrycan':
+        return this.createJerryCanModel();
+      case 'procedural-pouch':
+        return this.createPouchModel();
+      // Modelos anteriores: ocultos del selector, siguen construibles por url
       case 'procedural-box':
         return this.createOpenBoxModel();
       case 'procedural-mug':
@@ -1050,8 +1269,375 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private getSelectedModelLabel(): string {
-    return this.modelOptions.find((model) => model.url === this.selectedModelUrl)?.label ?? 'Modelo';
+  getSelectedModelLabel(): string {
+    const options = [...this.modelOptions, ...this.hiddenModelOptions];
+    return options.find((model) => model.url === this.selectedModelUrl)?.label ?? 'Modelo';
+  }
+
+  // ── Geometrias procedurales ────────────────────────────
+  //
+  // Reglas aplicadas (skill img2threejs, patrones de geometria):
+  // seccion transversal real en vez de losas extruidas, bordes con radio real
+  // en vez de aristas todas duras o todas suaves, piezas que se solapan en la
+  // union en vez de quedar cerca, y una malla nombrada por pieza.
+  // Las piezas no imprimibles llevan skipWrap para que los rayos no las tomen.
+
+  /** Anillo de superelipse: exponente 2 da elipse, 4 o mas da rectangulo redondeado. */
+  private superellipseRing(
+    y: number,
+    halfX: number,
+    halfZ: number,
+    exponent: number,
+    segments: number,
+    offsetX = 0,
+    rotation = 0,
+  ): THREE.Vector3[] {
+    const ring: THREE.Vector3[] = [];
+    const power = 2 / exponent;
+
+    for (let index = 0; index < segments; index++) {
+      const theta = (index / segments) * Math.PI * 2 + rotation;
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      ring.push(
+        new THREE.Vector3(
+          offsetX + Math.sign(cos) * Math.abs(cos) ** power * halfX,
+          y,
+          Math.sign(sin) * Math.abs(sin) ** power * halfZ,
+        ),
+      );
+    }
+
+    return ring;
+  }
+
+  /**
+   * Superficie cerrada a partir de anillos apilados, con tapa arriba y abajo.
+   * Cada anillo aporta una seccion transversal propia: eso es lo que separa un
+   * envase de una losa extruida con los cantos redondeados.
+   */
+  private buildLoftedGeometry(rings: THREE.Vector3[][]): THREE.BufferGeometry {
+    const segments = rings[0].length;
+    const positions: number[] = [];
+    const indices: number[] = [];
+
+    for (const ring of rings) {
+      for (const point of ring) positions.push(point.x, point.y, point.z);
+    }
+
+    for (let ringIndex = 0; ringIndex < rings.length - 1; ringIndex++) {
+      for (let index = 0; index < segments; index++) {
+        const next = (index + 1) % segments;
+        const a = ringIndex * segments + index;
+        const b = ringIndex * segments + next;
+        const c = (ringIndex + 1) * segments + index;
+        const d = (ringIndex + 1) * segments + next;
+        indices.push(a, c, b, b, c, d);
+      }
+    }
+
+    const addCap = (ring: THREE.Vector3[], ringStart: number, upward: boolean): void => {
+      const center = new THREE.Vector3();
+      for (const point of ring) center.add(point);
+      center.divideScalar(ring.length);
+
+      const centerIndex = positions.length / 3;
+      positions.push(center.x, center.y, center.z);
+
+      for (let index = 0; index < segments; index++) {
+        const next = (index + 1) % segments;
+        if (upward) indices.push(centerIndex, ringStart + next, ringStart + index);
+        else indices.push(centerIndex, ringStart + index, ringStart + next);
+      }
+    };
+
+    addCap(rings[0], 0, false);
+    addCap(rings[rings.length - 1], (rings.length - 1) * segments, true);
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    return geometry;
+  }
+
+  /** Taza torneada: pared con espesor real, borde rodado, pie con chaflan y asa embebida. */
+  private createStudioMugModel(): THREE.Group {
+    const group = new THREE.Group();
+    // DoubleSide porque la taza esta abierta: el interior es superficie visible
+    const ceramic = new THREE.MeshStandardMaterial({
+      color: '#f8faf8',
+      metalness: 0,
+      roughness: 0.3,
+      side: THREE.DoubleSide,
+    });
+
+    // Perfil: sube por fuera, cruza el borde y baja por dentro hasta el fondo
+    const profile = [
+      new THREE.Vector2(0.0, 0.0),
+      new THREE.Vector2(0.58, 0.0),
+      new THREE.Vector2(0.64, 0.015),
+      new THREE.Vector2(0.68, 0.06),
+      new THREE.Vector2(0.715, 0.16),
+      new THREE.Vector2(0.738, 0.4),
+      new THREE.Vector2(0.748, 0.9),
+      new THREE.Vector2(0.75, 1.55),
+      new THREE.Vector2(0.746, 1.7),
+      new THREE.Vector2(0.738, 1.755),
+      new THREE.Vector2(0.716, 1.775),
+      new THREE.Vector2(0.694, 1.755),
+      new THREE.Vector2(0.686, 1.6),
+      new THREE.Vector2(0.678, 0.9),
+      new THREE.Vector2(0.65, 0.3),
+      new THREE.Vector2(0.56, 0.13),
+      new THREE.Vector2(0.3, 0.1),
+      new THREE.Vector2(0.0, 0.1),
+    ];
+
+    const body = new THREE.Mesh(new THREE.LatheGeometry(profile, 128), ceramic);
+    body.name = 'printable-mug-body';
+    body.userData['preserveMaterial'] = true;
+
+    // Asa: correa aplanada, con los dos extremos metidos dentro de la pared
+    const handleCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(0.66, 1.36, 0),
+      new THREE.Vector3(0.95, 1.34, 0),
+      new THREE.Vector3(1.13, 1.08, 0),
+      new THREE.Vector3(1.11, 0.74, 0),
+      new THREE.Vector3(0.9, 0.5, 0),
+      new THREE.Vector3(0.64, 0.45, 0),
+    ]);
+
+    const handle = new THREE.Mesh(new THREE.TubeGeometry(handleCurve, 120, 0.078, 24, false), ceramic);
+    handle.name = 'mug-handle';
+    handle.scale.z = 0.7;
+    // Comparte material con el cuerpo: el color del objeto sigue mandando sobre el asa
+    handle.userData['preserveMaterial'] = true;
+    handle.userData['skipWrap'] = true;
+
+    group.add(body, handle);
+    group.rotation.y = -0.34;
+    return group;
+  }
+
+  /**
+   * Fusiona vertices coincidentes y devuelve la geometria indexada, para poder
+   * desplazar cada vertice una sola vez y que las normales salgan continuas.
+   */
+  private indexSharedVertices(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
+    const source = geometry.getAttribute('position') as THREE.BufferAttribute;
+    const lookup = new Map<string, number>();
+    const positions: number[] = [];
+    const indices: number[] = [];
+
+    for (let vertex = 0; vertex < source.count; vertex++) {
+      const x = source.getX(vertex);
+      const y = source.getY(vertex);
+      const z = source.getZ(vertex);
+      const key = `${Math.round(x * 1e5)},${Math.round(y * 1e5)},${Math.round(z * 1e5)}`;
+
+      let index = lookup.get(key);
+      if (index === undefined) {
+        index = positions.length / 3;
+        lookup.set(key, index);
+        positions.push(x, y, z);
+      }
+      indices.push(index);
+    }
+
+    const indexed = new THREE.BufferGeometry();
+    indexed.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    indexed.setIndex(indices);
+    geometry.dispose();
+    return indexed;
+  }
+
+  /** Balon: esfera geodesica con las 30 costuras del icosaedro hundidas en la superficie. */
+  private createSportBallModel(): THREE.Group {
+    const group = new THREE.Group();
+    // Nivel 6: la costura mide ~0.045 rad y necesita varios vertices de ancho,
+    // con menos subdivision el suavizado de normales se la come.
+    const geometry = this.indexSharedVertices(new THREE.IcosahedronGeometry(1, 6));
+    const position = geometry.getAttribute('position') as THREE.BufferAttribute;
+
+    // Vertices unicos del icosaedro base y las aristas que los unen
+    const seedPosition = new THREE.IcosahedronGeometry(1, 0).getAttribute('position');
+    const nodes: THREE.Vector3[] = [];
+    for (let index = 0; index < seedPosition.count; index++) {
+      const candidate = new THREE.Vector3().fromBufferAttribute(seedPosition, index).normalize();
+      if (!nodes.some((node) => node.distanceToSquared(candidate) < 1e-6)) nodes.push(candidate);
+    }
+
+    const seams: { a: THREE.Vector3; b: THREE.Vector3; normal: THREE.Vector3; span: number }[] = [];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const span = nodes[i].dot(nodes[j]);
+        if (span < 0.4 || span > 0.5) continue;
+        seams.push({
+          a: nodes[i],
+          b: nodes[j],
+          normal: new THREE.Vector3().crossVectors(nodes[i], nodes[j]).normalize(),
+          span,
+        });
+      }
+    }
+
+    const vertex = new THREE.Vector3();
+    const projected = new THREE.Vector3();
+    // La subdivision del icosaedro deja vertices justo sobre cada arista, asi que
+    // la costura se puede estrechar sin que quede submuestreada.
+    const grooveDepth = 0.045;
+    const grooveWidth = 0.045;
+    const panelBulge = 0.009;
+    const panelWidth = 0.3;
+
+    for (let index = 0; index < position.count; index++) {
+      vertex.fromBufferAttribute(position, index).normalize();
+      let nearest = Math.PI;
+
+      for (const seam of seams) {
+        const offAxis = vertex.dot(seam.normal);
+        projected.copy(vertex).addScaledVector(seam.normal, -offAxis).normalize();
+        const distance =
+          projected.dot(seam.a) >= seam.span && projected.dot(seam.b) >= seam.span
+            ? Math.asin(Math.min(1, Math.abs(offAxis)))
+            : Math.min(vertex.angleTo(seam.a), vertex.angleTo(seam.b));
+        if (distance < nearest) nearest = distance;
+      }
+
+      const radius =
+        1 +
+        panelBulge * (1 - Math.exp(-((nearest / panelWidth) ** 2))) -
+        grooveDepth * Math.exp(-((nearest / grooveWidth) ** 2));
+      position.setXYZ(index, vertex.x * radius, vertex.y * radius, vertex.z * radius);
+    }
+
+    position.needsUpdate = true;
+    geometry.computeVertexNormals();
+
+    const ball = new THREE.Mesh(geometry, this.createBaseMaterial());
+    ball.name = 'printable-ball';
+    ball.position.y = 1;
+
+    group.add(ball);
+    return group;
+  }
+
+  /** Caja de carton cerrada: aristas con radio real y precinto en la tapa. */
+  private createCartonModel(): THREE.Group {
+    const group = new THREE.Group();
+
+    const body = new THREE.Mesh(
+      new RoundedBoxGeometry(1.62, 2.24, 0.94, 6, 0.045),
+      this.createBaseMaterial(),
+    );
+    body.name = 'printable-carton';
+    body.position.y = 1.12;
+
+    const tapeMaterial = new THREE.MeshStandardMaterial({
+      color: '#b8bcc0',
+      metalness: 0.05,
+      roughness: 0.55,
+    });
+    const tape = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.012, 0.2), tapeMaterial);
+    tape.name = 'carton-tape';
+    tape.position.y = 2.242;
+    tape.userData['skipWrap'] = true;
+
+    group.add(body, tape);
+    group.rotation.y = -0.28;
+    return group;
+  }
+
+  /** Bidon: cuerpo de seccion rectangular redondeada, cuello descentrado y asa moldeada. */
+  private createJerryCanModel(): THREE.Group {
+    const group = new THREE.Group();
+    const segments = 96;
+
+    // [y, semiancho, semiprofundo, exponente, desplazamiento del centro]
+    const sections: [number, number, number, number, number][] = [
+      [0.0, 0.5, 0.32, 4.5, 0],
+      [0.05, 0.6, 0.4, 5, 0],
+      [0.16, 0.65, 0.44, 5.2, 0],
+      [0.6, 0.665, 0.45, 5.2, 0],
+      [1.35, 0.665, 0.45, 5.2, 0],
+      [1.62, 0.655, 0.445, 5, 0.01],
+      [1.9, 0.62, 0.43, 4.6, 0.03],
+      [2.16, 0.55, 0.4, 4, 0.06],
+      [2.36, 0.44, 0.34, 3.2, 0.09],
+      [2.5, 0.32, 0.27, 2.6, 0.12],
+      [2.6, 0.21, 0.2, 2.2, 0.14],
+      [2.66, 0.17, 0.17, 2, 0.15],
+      [2.86, 0.17, 0.17, 2, 0.15],
+    ];
+
+    const rings = sections.map(([y, halfX, halfZ, exponent, offsetX]) =>
+      this.superellipseRing(y, halfX, halfZ, exponent, segments, offsetX),
+    );
+
+    const body = new THREE.Mesh(this.buildLoftedGeometry(rings), this.createBaseMaterial());
+    body.name = 'printable-jerrycan-body';
+
+    // Asa moldeada sobre el hombro, con los extremos metidos en el cuerpo
+    const handleCurve = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-0.28, 2.24, 0),
+      new THREE.Vector3(-0.44, 2.44, 0),
+      new THREE.Vector3(-0.6, 2.4, 0),
+      new THREE.Vector3(-0.66, 2.15, 0),
+      new THREE.Vector3(-0.58, 1.94, 0),
+    ]);
+    const handle = new THREE.Mesh(
+      new THREE.TubeGeometry(handleCurve, 96, 0.085, 20, false),
+      this.createBaseMaterial(),
+    );
+    handle.name = 'jerrycan-handle';
+    handle.scale.z = 0.85;
+
+    const capMaterial = new THREE.MeshStandardMaterial({
+      color: '#2f3438',
+      metalness: 0.1,
+      roughness: 0.45,
+    });
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.19, 0.24, 64), capMaterial);
+    cap.name = 'jerrycan-cap';
+    cap.position.set(0.15, 2.92, 0);
+    cap.userData['skipWrap'] = true;
+
+    group.add(body, handle, cap);
+    group.rotation.y = -0.24;
+    return group;
+  }
+
+  /** Pouch tipo doypack: fondo con fuelle, panza y sello superior aplanado. */
+  private createPouchModel(): THREE.Group {
+    const group = new THREE.Group();
+    const segments = 96;
+
+    // [y, semiancho, semiprofundo, exponente, desplazamiento, giro]
+    const sections: [number, number, number, number, number, number][] = [
+      [0.0, 0.44, 0.13, 2.6, 0, 0],
+      [0.04, 0.54, 0.24, 3, 0, 0.005],
+      [0.16, 0.62, 0.36, 3.2, 0.005, 0.01],
+      [0.45, 0.68, 0.44, 3.4, 0.01, 0.018],
+      [0.95, 0.705, 0.47, 3.5, 0.012, 0.024],
+      [1.45, 0.69, 0.45, 3.4, 0.01, 0.022],
+      [1.85, 0.665, 0.4, 3.2, 0.005, 0.016],
+      [2.15, 0.635, 0.31, 3, 0, 0.01],
+      [2.36, 0.605, 0.18, 2.6, -0.005, 0.005],
+      [2.5, 0.585, 0.075, 2.2, -0.008, 0],
+      [2.58, 0.575, 0.035, 2, -0.01, 0],
+    ];
+
+    const rings = sections.map(([y, halfX, halfZ, exponent, offsetX, rotation]) =>
+      this.superellipseRing(y, halfX, halfZ, exponent, segments, offsetX, rotation),
+    );
+
+    const pouch = new THREE.Mesh(this.buildLoftedGeometry(rings), this.createBaseMaterial());
+    pouch.name = 'printable-pouch';
+
+    group.add(pouch);
+    group.rotation.y = -0.3;
+    return group;
   }
 
   private createBottleModel(): THREE.Group {
@@ -1415,26 +2001,44 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
     this.wrapCanvas.height = this.textureSize;
     this.wrapTexture = new THREE.CanvasTexture(this.wrapCanvas);
     this.wrapTexture.colorSpace = THREE.SRGBColorSpace;
+    // La lamina se ve casi siempre en angulo: sin anisotropia la impresion
+    // se emborrona justo donde la superficie se va de canto.
+    this.wrapTexture.anisotropy = this.renderer?.capabilities.getMaxAnisotropy() ?? 1;
+    this.wrapTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    this.wrapTexture.magFilter = THREE.LinearFilter;
+    this.wrapTexture.wrapS = THREE.ClampToEdgeWrapping;
+    this.wrapTexture.wrapT = THREE.ClampToEdgeWrapping;
+    this.wrapTexture.generateMipmaps = true;
     return this.wrapTexture;
   }
 
   private redrawWrapTexture(): void {
     const texture = this.ensureWrapTexture();
     const canvas = this.wrapCanvas;
-    const context = canvas?.getContext('2d');
-    if (!canvas || !context) return;
+    if (!canvas) return;
+
+    if (this.wrapImage) {
+      // El lienzo toma la relacion de aspecto de la imagen y esta lo llena entero.
+      // La lamina proyectada se construye con esa misma relacion, asi que UV 0..1
+      // es exactamente la imagen: antes se enmarcaba en un cuadrado y el mapeo
+      // la estiraba por su propio factor de aspecto.
+      const aspect = this.getImageAspect();
+      const width = aspect >= 1 ? this.textureSize : Math.max(1, Math.round(this.textureSize * aspect));
+      const height = aspect >= 1 ? Math.max(1, Math.round(this.textureSize / aspect)) : this.textureSize;
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+    }
+
+    const context = canvas.getContext('2d');
+    if (!context) return;
 
     context.clearRect(0, 0, canvas.width, canvas.height);
 
     if (this.wrapImage) {
-      const imageAspect = this.wrapImage.width / Math.max(this.wrapImage.height, 1);
-      const canvasAspect = canvas.width / canvas.height;
-      const drawWidth = imageAspect > canvasAspect ? canvas.width : canvas.height * imageAspect;
-      const drawHeight = imageAspect > canvasAspect ? canvas.width / imageAspect : canvas.height;
-      const drawX = (canvas.width - drawWidth) * 0.5;
-      const drawY = (canvas.height - drawHeight) * 0.5;
       context.globalAlpha = this.wrapOpacity;
-      context.drawImage(this.wrapImage, drawX, drawY, drawWidth, drawHeight);
+      context.drawImage(this.wrapImage, 0, 0, canvas.width, canvas.height);
       context.globalAlpha = 1;
     }
 
@@ -1453,7 +2057,6 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
     const placementMaxU = options.placementMaxU ?? 1;
     const modelBox = new THREE.Box3().setFromObject(this.modelRoot);
     const modelSize = modelBox.getSize(new THREE.Vector3());
-    const modelCenter = modelBox.getCenter(new THREE.Vector3());
     const projectionWidth = Math.max(modelSize.x, modelSize.z) * (0.2 + this.wrapScale * 1.6);
     const projectionHeight = projectionWidth / this.getImageAspect();
     const projectionCenter = new THREE.Vector3(
@@ -1461,93 +2064,44 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
       THREE.MathUtils.lerp(modelBox.min.y, modelBox.max.y, this.wrapVertical),
       modelBox.max.z + Math.max(modelSize.z, 0.5),
     );
-    const grid: ProjectedVertex[][] = [];
-    const far = Math.max(modelSize.x, modelSize.y, modelSize.z) * 3 + 2;
-    const worldDirection = new THREE.Vector3(0, 0, -1);
-    let visibleMinU = 1;
-    let visibleMaxU = 0;
-    let visibleMinV = 1;
-    let visibleMaxV = 0;
-    let hasHit = false;
+    const cell = Math.max(projectionWidth / xSegments, projectionHeight / ySegments);
 
-    this.raycaster.set(projectionCenter, worldDirection);
-    this.raycaster.far = far;
-    const centerHit = this.raycaster.intersectObjects(targetMeshes, false).length > 0;
-
-    for (let yIndex = 0; yIndex <= ySegments; yIndex++) {
-      const row: ProjectedVertex[] = [];
-      const v = yIndex / ySegments;
-
-      for (let xIndex = 0; xIndex <= xSegments; xIndex++) {
-        const segmentU = xIndex / xSegments;
-        const placementU = THREE.MathUtils.lerp(placementMinU, placementMaxU, segmentU);
-        const sourceU = THREE.MathUtils.lerp(sourceMinU, sourceMaxU, segmentU);
-        const worldOrigin = new THREE.Vector3(
+    // Haz paralelo lanzado desde el frente del encuadre
+    const field: ProjectionField = {
+      far: Math.max(modelSize.x, modelSize.y, modelSize.z) * 3 + 2,
+      lift: this.getWrapLift(modelSize),
+      depthTolerance: cell * this.wrapDepthTolerance,
+      ray: (gu, _gv, origin, direction) => {
+        const placementU = THREE.MathUtils.lerp(placementMinU, placementMaxU, gu);
+        origin.set(
           projectionCenter.x + (placementU - 0.5) * projectionWidth,
-          projectionCenter.y + (v - 0.5) * projectionHeight,
+          projectionCenter.y + (_gv - 0.5) * projectionHeight,
           projectionCenter.z,
         );
-        this.raycaster.set(worldOrigin, worldDirection);
-        this.raycaster.far = far;
+        direction.set(0, 0, -1);
+      },
+      uv: (gu, gv, out) => out.set(THREE.MathUtils.lerp(sourceMinU, sourceMaxU, gu), gv),
+    };
 
-        const hit = this.raycaster.intersectObjects(targetMeshes, false)[0];
+    const centerHit = this.castProjectionRay(field, targetMeshes, 0.5, 0.5).hit;
+    const surface = this.buildProjectedSurface(field, targetMeshes, xSegments, ySegments);
 
-        if (!hit) {
-          const localMiss = worldOrigin.clone();
-          this.modelRoot.worldToLocal(localMiss);
-          row.push({ hit: false, position: localMiss, uv: new THREE.Vector2(sourceU, v) });
-          continue;
-        }
+    const visibleMinU = surface.hasHit
+      ? THREE.MathUtils.lerp(sourceMinU, sourceMaxU, surface.minGu)
+      : 0;
+    const visibleMaxU = surface.hasHit
+      ? THREE.MathUtils.lerp(sourceMinU, sourceMaxU, surface.maxGu)
+      : 0;
+    const visibleMinV = surface.hasHit ? surface.minGv : 0;
+    const visibleMaxV = surface.hasHit ? surface.maxGv : 0;
 
-        hasHit = true;
-        visibleMinU = Math.min(visibleMinU, sourceU);
-        visibleMaxU = Math.max(visibleMaxU, sourceU);
-        visibleMinV = Math.min(visibleMinV, v);
-        visibleMaxV = Math.max(visibleMaxV, v);
-
-        const normal = hit.face
-          ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
-          : hit.point.clone().sub(modelCenter).normalize();
-        const liftedPoint = hit.point.clone().addScaledVector(normal, this.wrapOffset);
-        const localPoint = liftedPoint.clone();
-        this.modelRoot.worldToLocal(localPoint);
-        row.push({ hit: true, position: localPoint, uv: new THREE.Vector2(sourceU, v) });
-      }
-
-      grid.push(row);
-    }
-
-    if (!hasHit) {
-      visibleMinU = 0; visibleMaxU = 0;
-      visibleMinV = 0; visibleMaxV = 0;
-    }
-
-    const leftOverflow = hasHit && visibleMinU > this.overflowThreshold;
-    const rightOverflow = hasHit && visibleMaxU < 1 - this.overflowThreshold;
-    const bottomOverflow = hasHit && visibleMinV > this.overflowThreshold;
-    const topOverflow = hasHit && visibleMaxV < 1 - this.overflowThreshold;
-
-    const positions: number[] = [];
-    const uvs: number[] = [];
-
-    for (let yIndex = 0; yIndex < ySegments; yIndex++) {
-      for (let xIndex = 0; xIndex < xSegments; xIndex++) {
-        const a = grid[yIndex][xIndex];
-        const b = grid[yIndex][xIndex + 1];
-        const c = grid[yIndex + 1][xIndex];
-        const d = grid[yIndex + 1][xIndex + 1];
-        this.pushTriangleIfProjected(a, b, c, positions, uvs);
-        this.pushTriangleIfProjected(b, d, c, positions, uvs);
-      }
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geometry.computeVertexNormals();
+    const leftOverflow = surface.hasHit && visibleMinU > this.overflowThreshold;
+    const rightOverflow = surface.hasHit && visibleMaxU < 1 - this.overflowThreshold;
+    const bottomOverflow = surface.hasHit && visibleMinV > this.overflowThreshold;
+    const topOverflow = surface.hasHit && visibleMaxV < 1 - this.overflowThreshold;
 
     return {
-      geometry,
+      geometry: this.toWrapGeometry(surface),
       overflows: leftOverflow || rightOverflow || bottomOverflow || topOverflow,
       horizontalOverflows: leftOverflow || rightOverflow,
       verticalOverflows: bottomOverflow || topOverflow,
@@ -1566,72 +2120,36 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
     options: StickerStripOptions,
   ): { geometry: THREE.BufferGeometry } {
     const rayRadius = metrics.radius + Math.max(metrics.projectionWidth, metrics.projectionHeight) + 1;
-    const far = rayRadius * 2 + metrics.radius * 2 + 2;
     const yMin = metrics.center.y - metrics.projectionHeight * 0.5;
     const yMax = metrics.center.y + metrics.projectionHeight * 0.5;
-    const grid: ProjectedVertex[][] = [];
+    const stripArc = Math.abs(options.sourceMaxU - options.sourceMinU) * options.radiansPerU * metrics.radius;
+    const cell = Math.max(stripArc, metrics.projectionHeight / ySegments);
 
-    for (let yIndex = 0; yIndex <= ySegments; yIndex++) {
-      const row: ProjectedVertex[] = [];
-      const v = yIndex / ySegments;
-      const y = THREE.MathUtils.lerp(yMin, yMax, v);
-
-      for (const u of [options.sourceMinU, options.sourceMaxU]) {
+    // Tira radial: el mismo haz que el modo Rodear, pero de una sola columna
+    const field: ProjectionField = {
+      far: rayRadius * 2 + metrics.radius * 2 + 2,
+      lift: this.getWrapLift(new THREE.Vector3().setScalar(metrics.radius * 2)),
+      depthTolerance: cell * this.wrapDepthTolerance,
+      ray: (gu, gv, origin, direction) => {
+        const u = THREE.MathUtils.lerp(options.sourceMinU, options.sourceMaxU, gu);
         const angle = options.anchorAngle + (u - options.anchorU) * options.radiansPerU;
-        const radial = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
-        const localOrigin = new THREE.Vector3(
-          metrics.modelCenter.x + radial.x * rayRadius,
-          y,
-          metrics.modelCenter.z + radial.z * rayRadius,
+        origin.set(
+          metrics.modelCenter.x + Math.sin(angle) * rayRadius,
+          THREE.MathUtils.lerp(yMin, yMax, gv),
+          metrics.modelCenter.z + Math.cos(angle) * rayRadius,
         );
-        const localDirection = new THREE.Vector3(
-          metrics.modelCenter.x - localOrigin.x,
-          0,
-          metrics.modelCenter.z - localOrigin.z,
-        ).normalize();
-        const worldOrigin = localOrigin.clone();
-        const worldDirection = localDirection.clone();
-        this.modelRoot.localToWorld(worldOrigin);
-        worldDirection.transformDirection(this.modelRoot.matrixWorld);
-        this.raycaster.set(worldOrigin, worldDirection);
-        this.raycaster.far = far;
+        direction
+          .set(metrics.modelCenter.x - origin.x, 0, metrics.modelCenter.z - origin.z)
+          .normalize();
+        this.modelRoot.localToWorld(origin);
+        direction.transformDirection(this.modelRoot.matrixWorld);
+      },
+      uv: (gu, gv, out) =>
+        out.set(THREE.MathUtils.lerp(options.sourceMinU, options.sourceMaxU, gu), gv),
+    };
 
-        const hit = this.raycaster.intersectObjects(targetMeshes, false)[0];
-
-        if (!hit) {
-          row.push({ hit: false, position: localOrigin, uv: new THREE.Vector2(u, v) });
-          continue;
-        }
-
-        const normal = hit.face
-          ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
-          : hit.point.clone().sub(worldOrigin).normalize().negate();
-        const liftedPoint = hit.point.clone().addScaledVector(normal, this.wrapOffset);
-        const localPoint = liftedPoint.clone();
-        this.modelRoot.worldToLocal(localPoint);
-        row.push({ hit: true, position: localPoint, uv: new THREE.Vector2(u, v) });
-      }
-
-      grid.push(row);
-    }
-
-    const positions: number[] = [];
-    const uvs: number[] = [];
-
-    for (let yIndex = 0; yIndex < ySegments; yIndex++) {
-      const a = grid[yIndex][0];
-      const b = grid[yIndex][1];
-      const c = grid[yIndex + 1][0];
-      const d = grid[yIndex + 1][1];
-      this.pushTriangleIfProjected(a, b, c, positions, uvs);
-      this.pushTriangleIfProjected(b, d, c, positions, uvs);
-    }
-
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geometry.computeVertexNormals();
-    return { geometry };
+    const surface = this.buildProjectedSurface(field, targetMeshes, 1, ySegments);
+    return { geometry: this.toWrapGeometry(surface) };
   }
 
   private buildRadialShrinkwrappedGeometry(
@@ -1653,48 +2171,178 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
     const verticalCenter = THREE.MathUtils.lerp(modelBox.min.y, modelBox.max.y, this.wrapVertical);
     const yMin = verticalCenter - projectionHeight * 0.5;
     const yMax = verticalCenter + projectionHeight * 0.5;
-    const grid: ProjectedVertex[][] = [];
+    const surfaceRadius = Math.max(modelSize.x, modelSize.z) * 0.5;
+    const cell = Math.max(
+      (angularSpan * surfaceRadius) / xSegments,
+      projectionHeight / ySegments,
+    );
+
+    // Haz radial: cada rayo entra perpendicular al eje, apuntando al centro
+    const field: ProjectionField = {
+      far,
+      lift: this.getWrapLift(modelSize),
+      depthTolerance: cell * this.wrapDepthTolerance,
+      ray: (gu, gv, origin, direction) => {
+        const angle = centerAngle + (gu - 0.5) * angularSpan;
+        origin.set(
+          modelCenter.x + Math.sin(angle) * radius,
+          THREE.MathUtils.lerp(yMin, yMax, gv),
+          modelCenter.z + Math.cos(angle) * radius,
+        );
+        direction.set(modelCenter.x - origin.x, 0, modelCenter.z - origin.z).normalize();
+        this.modelRoot.localToWorld(origin);
+        direction.transformDirection(this.modelRoot.matrixWorld);
+      },
+      uv: (gu, gv, out) => out.set(gu, gv),
+    };
+
+    return this.toWrapGeometry(this.buildProjectedSurface(field, targetMeshes, xSegments, ySegments));
+  }
+
+  // ── Muestreo por rayos ─────────────────────────────────
+
+  /**
+   * Lanza un rayo del campo y devuelve el vertice proyectado.
+   * Descarta caras de espaldas y caras casi tangentes al rayo, que son las que
+   * producen el estirado de la imagen en el borde del objeto.
+   */
+  private castProjectionRay(
+    field: ProjectionField,
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+    gu: number,
+    gv: number,
+  ): RaySample {
+    const origin = this.scratchOrigin;
+    const direction = this.scratchDirection;
+    field.ray(gu, gv, origin, direction);
+
+    const uv = new THREE.Vector2();
+    field.uv(gu, gv, uv);
+
+    this.raycaster.set(origin, direction);
+    this.raycaster.far = field.far;
+    const hits = this.raycaster.intersectObjects(targetMeshes, false);
+
+    let fallback: THREE.Intersection | undefined;
+
+    for (const hit of hits) {
+      if (!hit.face) continue;
+
+      // Normal geometrica: define si la cara mira al rayo y cuanto se estira la imagen
+      const faceNormal = this.scratchFaceNormal
+        .copy(hit.face.normal)
+        .transformDirection(hit.object.matrixWorld);
+      const facing = -faceNormal.dot(direction);
+
+      if (facing >= this.wrapGrazingLimit) return this.toSample(hit, faceNormal, field, uv);
+
+      // Mallas con winding invertido: se acepta la cara, pero solo si no roza
+      if (!fallback && Math.abs(facing) >= this.wrapGrazingLimit) fallback = hit;
+    }
+
+    if (fallback && fallback.face) {
+      const faceNormal = this.scratchFaceNormal
+        .copy(fallback.face.normal)
+        .transformDirection(fallback.object.matrixWorld);
+      return this.toSample(fallback, faceNormal, field, uv);
+    }
+
+    const missed = origin.clone();
+    this.modelRoot.worldToLocal(missed);
+    return { hit: false, position: missed, uv, depth: Number.POSITIVE_INFINITY };
+  }
+
+  private toSample(
+    hit: THREE.Intersection,
+    faceNormal: THREE.Vector3,
+    field: ProjectionField,
+    uv: THREE.Vector2,
+  ): RaySample {
+    // Para separar la lamina se usa la normal interpolada del vertice, no la de
+    // la cara: sobre malla de pocos poligonos evita el facetado de la impresion.
+    const lift = this.scratchLift;
+    const smooth = (hit as THREE.Intersection & { normal?: THREE.Vector3 }).normal;
+    if (smooth) lift.copy(smooth).transformDirection(hit.object.matrixWorld).normalize();
+    else lift.copy(faceNormal);
+
+    const position = hit.point.clone().addScaledVector(lift, field.lift);
+    this.modelRoot.worldToLocal(position);
+    return { hit: true, position, uv, depth: hit.distance };
+  }
+
+  /**
+   * Busca por biseccion el punto donde la superficie termina, entre una muestra
+   * que golpea y otra que falla. Sin esto, el borde de la impresion queda
+   * escalonado con el tamano de la celda de la rejilla.
+   */
+  private refineSilhouette(
+    field: ProjectionField,
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+    inside: RaySample,
+    insideGu: number,
+    insideGv: number,
+    outsideGu: number,
+    outsideGv: number,
+  ): RaySample {
+    let best = inside;
+    let nearGu = insideGu;
+    let nearGv = insideGv;
+    let farGu = outsideGu;
+    let farGv = outsideGv;
+
+    for (let step = 0; step < this.wrapEdgeRefineSteps; step++) {
+      const midGu = (nearGu + farGu) * 0.5;
+      const midGv = (nearGv + farGv) * 0.5;
+      const sample = this.castProjectionRay(field, targetMeshes, midGu, midGv);
+
+      if (sample.hit) {
+        best = sample;
+        nearGu = midGu;
+        nearGv = midGv;
+      } else {
+        farGu = midGu;
+        farGv = midGv;
+      }
+    }
+
+    return best;
+  }
+
+  /**
+   * Rejilla de rayos sobre el campo y costura de la lamina.
+   * Cada celda se recorta contra la silueta real y se descarta si sus vertices
+   * caen en superficies distintas, para no coser un puente sobre el aire.
+   */
+  private buildProjectedSurface(
+    field: ProjectionField,
+    targetMeshes: THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>[],
+    xSegments: number,
+    ySegments: number,
+  ): ProjectedSurface {
+    const grid: RaySample[][] = [];
+    let hasHit = false;
+    let minGu = 1;
+    let maxGu = 0;
+    let minGv = 1;
+    let maxGv = 0;
 
     for (let yIndex = 0; yIndex <= ySegments; yIndex++) {
-      const row: ProjectedVertex[] = [];
-      const v = yIndex / ySegments;
-      const y = THREE.MathUtils.lerp(yMin, yMax, v);
+      const gv = yIndex / ySegments;
+      const row: RaySample[] = [];
 
       for (let xIndex = 0; xIndex <= xSegments; xIndex++) {
-        const u = xIndex / xSegments;
-        const angle = centerAngle + (u - 0.5) * angularSpan;
-        const radial = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
-        const localOrigin = new THREE.Vector3(
-          modelCenter.x + radial.x * radius,
-          y,
-          modelCenter.z + radial.z * radius,
-        );
-        const localDirection = new THREE.Vector3(
-          modelCenter.x - localOrigin.x,
-          0,
-          modelCenter.z - localOrigin.z,
-        ).normalize();
-        const worldOrigin = localOrigin.clone();
-        const worldDirection = localDirection.clone();
-        this.modelRoot.localToWorld(worldOrigin);
-        worldDirection.transformDirection(this.modelRoot.matrixWorld);
-        this.raycaster.set(worldOrigin, worldDirection);
-        this.raycaster.far = far;
+        const gu = xIndex / xSegments;
+        const sample = this.castProjectionRay(field, targetMeshes, gu, gv);
 
-        const hit = this.raycaster.intersectObjects(targetMeshes, false)[0];
-
-        if (!hit) {
-          row.push({ hit: false, position: localOrigin, uv: new THREE.Vector2(u, v) });
-          continue;
+        if (sample.hit) {
+          hasHit = true;
+          minGu = Math.min(minGu, gu);
+          maxGu = Math.max(maxGu, gu);
+          minGv = Math.min(minGv, gv);
+          maxGv = Math.max(maxGv, gv);
         }
 
-        const normal = hit.face
-          ? hit.face.normal.clone().transformDirection(hit.object.matrixWorld)
-          : hit.point.clone().sub(worldOrigin).normalize().negate();
-        const liftedPoint = hit.point.clone().addScaledVector(normal, this.wrapOffset);
-        const localPoint = liftedPoint.clone();
-        this.modelRoot.worldToLocal(localPoint);
-        row.push({ hit: true, position: localPoint, uv: new THREE.Vector2(u, v) });
+        row.push(sample);
       }
 
       grid.push(row);
@@ -1702,37 +2350,124 @@ export class ProductWrapperComponent implements AfterViewInit, OnDestroy {
 
     const positions: number[] = [];
     const uvs: number[] = [];
+    const corners: RaySample[] = new Array(4);
+    const cornerGu = new Array<number>(4);
+    const cornerGv = new Array<number>(4);
+    const polygon: RaySample[] = [];
 
     for (let yIndex = 0; yIndex < ySegments; yIndex++) {
+      const gv0 = yIndex / ySegments;
+      const gv1 = (yIndex + 1) / ySegments;
+
       for (let xIndex = 0; xIndex < xSegments; xIndex++) {
-        const a = grid[yIndex][xIndex];
-        const b = grid[yIndex][xIndex + 1];
-        const c = grid[yIndex + 1][xIndex];
-        const d = grid[yIndex + 1][xIndex + 1];
-        this.pushTriangleIfProjected(a, b, c, positions, uvs);
-        this.pushTriangleIfProjected(b, d, c, positions, uvs);
+        const gu0 = xIndex / xSegments;
+        const gu1 = (xIndex + 1) / xSegments;
+
+        // Contorno de la celda en orden de recorrido
+        corners[0] = grid[yIndex][xIndex];
+        corners[1] = grid[yIndex][xIndex + 1];
+        corners[2] = grid[yIndex + 1][xIndex + 1];
+        corners[3] = grid[yIndex + 1][xIndex];
+        cornerGu[0] = gu0; cornerGv[0] = gv0;
+        cornerGu[1] = gu1; cornerGv[1] = gv0;
+        cornerGu[2] = gu1; cornerGv[2] = gv1;
+        cornerGu[3] = gu0; cornerGv[3] = gv1;
+
+        let hitCount = 0;
+        for (let i = 0; i < 4; i++) if (corners[i].hit) hitCount++;
+        if (hitCount === 0) continue;
+
+        // Caso silla: dos esquinas opuestas. Cada una da su propio triangulo,
+        // recorrer el contorno entero cruzaria el hueco del medio.
+        if (hitCount === 2 && corners[0].hit === corners[2].hit) {
+          for (const index of corners[0].hit ? [0, 2] : [1, 3]) {
+            const previous = (index + 3) % 4;
+            const next = (index + 1) % 4;
+            polygon.length = 0;
+            polygon.push(
+              corners[index],
+              this.refineSilhouette(
+                field, targetMeshes, corners[index],
+                cornerGu[index], cornerGv[index], cornerGu[next], cornerGv[next],
+              ),
+              this.refineSilhouette(
+                field, targetMeshes, corners[index],
+                cornerGu[index], cornerGv[index], cornerGu[previous], cornerGv[previous],
+              ),
+            );
+            this.emitPolygon(polygon, field.depthTolerance, positions, uvs);
+          }
+          continue;
+        }
+
+        polygon.length = 0;
+        for (let i = 0; i < 4; i++) {
+          const next = (i + 1) % 4;
+          if (corners[i].hit) polygon.push(corners[i]);
+          if (corners[i].hit === corners[next].hit) continue;
+
+          const insideIndex = corners[i].hit ? i : next;
+          const outsideIndex = corners[i].hit ? next : i;
+          polygon.push(
+            this.refineSilhouette(
+              field, targetMeshes, corners[insideIndex],
+              cornerGu[insideIndex], cornerGv[insideIndex],
+              cornerGu[outsideIndex], cornerGv[outsideIndex],
+            ),
+          );
+        }
+
+        this.emitPolygon(polygon, field.depthTolerance, positions, uvs);
       }
     }
 
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geometry.computeVertexNormals();
-    return geometry;
+    return { positions, uvs, hasHit, minGu, maxGu, minGv, maxGv };
   }
 
-  private pushTriangleIfProjected(
-    a: ProjectedVertex,
-    b: ProjectedVertex,
-    c: ProjectedVertex,
+  private emitPolygon(
+    polygon: RaySample[],
+    depthTolerance: number,
     positions: number[],
     uvs: number[],
   ): void {
-    if (!a.hit || !b.hit || !c.hit) return;
+    if (polygon.length < 3) return;
+
+    let minDepth = Number.POSITIVE_INFINITY;
+    let maxDepth = Number.NEGATIVE_INFINITY;
+    for (const vertex of polygon) {
+      minDepth = Math.min(minDepth, vertex.depth);
+      maxDepth = Math.max(maxDepth, vertex.depth);
+    }
+    // La celda toca dos superficies separadas: no se cose
+    if (maxDepth - minDepth > depthTolerance) return;
+
+    for (let i = 1; i < polygon.length - 1; i++) {
+      this.pushTriangle(polygon[0], polygon[i], polygon[i + 1], positions, uvs);
+    }
+  }
+
+  private pushTriangle(
+    a: RaySample,
+    b: RaySample,
+    c: RaySample,
+    positions: number[],
+    uvs: number[],
+  ): void {
     for (const vertex of [a, b, c]) {
       positions.push(vertex.position.x, vertex.position.y, vertex.position.z);
       uvs.push(vertex.uv.x, vertex.uv.y);
     }
+  }
+
+  private toWrapGeometry(surface: ProjectedSurface): THREE.BufferGeometry {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(surface.positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(surface.uvs, 2));
+    return geometry;
+  }
+
+  private getWrapLift(modelSize: THREE.Vector3): number {
+    return Math.max(modelSize.x, modelSize.y, modelSize.z, 0.001) * this.wrapLiftRatio;
   }
 
   // ── Scene helpers ──────────────────────────────────────

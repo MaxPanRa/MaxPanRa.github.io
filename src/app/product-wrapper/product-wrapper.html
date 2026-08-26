@@ -1,75 +1,160 @@
-<section class="designer-shell">
-  <header class="topbar">
-    <div class="topbar-brand" aria-label="Printit">
-      <strong>Print</strong><em>it</em>
+<div class="rig">
+  <header class="head">
+    <span class="head-rule js-rule" aria-hidden="true"></span>
+
+    <div class="brand js-boot" aria-label="Printit">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="square" stroke-linejoin="miter">
+          <path d="M12 2.6 20.4 7.3v9.4L12 21.4 3.6 16.7V7.3Z" />
+          <path d="M3.6 7.3 12 12l8.4-4.7M12 12v9.4" />
+        </svg>
+      </span>
+      <span class="brand-word">Printit</span>
+      <span class="brand-tag">Wrap Studio</span>
     </div>
 
-    <label class="upload-btn" [class.has-image]="hasWrapImage()">
-      <span class="upload-icon" aria-hidden="true">+</span>
-      <span>Imagen</span>
+    <div class="head-read js-boot">
+      <span class="read">
+        <i>Modelo</i>
+        <b>{{ getSelectedModelLabel() }}</b>
+      </span>
+      <span class="read">
+        <i>Proyeccion</i>
+        <b>{{ wrapMode === 'front' ? 'Frontal' : 'Rodear' }}</b>
+      </span>
+    </div>
+
+    <label class="upload js-boot" [class.is-loaded]="hasWrapImage()">
+      <span class="upload-slot" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter">
+          <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" />
+          <path d="M4 16v2.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V16" />
+        </svg>
+      </span>
+      <span class="upload-text">{{ hasWrapImage() ? 'Cambiar imagen' : 'Subir imagen' }}</span>
       <input type="file" accept="image/*" (change)="onImageSelected($event)" [disabled]="isBaking()" />
     </label>
   </header>
 
-  <main class="workspace">
-    <section class="preview-panel" aria-label="Vista previa 3D">
+  <main class="work" id="workspace">
+    <span class="rail-rule js-rule" aria-hidden="true"></span>
+
+    <section class="view" aria-label="Vista previa 3D">
       <div
         #canvasHost
-        class="canvas-host"
+        class="view-core"
         [class.is-baking]="isBaking()"
         (pointerdown)="onPointerDown($event)"
         (pointermove)="onPointerMove($event)"
         (pointerup)="onPointerUp($event)"
         (pointercancel)="onPointerUp($event)"
       >
-        <canvas #previewCanvas aria-label="Objeto 3D con imagen aplicada"></canvas>
+        <canvas #previewCanvas aria-label="Objeto 3D con la imagen aplicada"></canvas>
 
-        <p class="status-pill" aria-live="polite">{{ statusMessage() }}</p>
+        <span class="view-grid" aria-hidden="true"></span>
+        <span class="view-ruler" aria-hidden="true"></span>
+
+        <span class="frame frame-tl js-frame" aria-hidden="true"></span>
+        <span class="frame frame-tr js-frame" aria-hidden="true"></span>
+        <span class="frame frame-bl js-frame" aria-hidden="true"></span>
+        <span class="frame frame-br js-frame" aria-hidden="true"></span>
+
+        @if (!hasWrapImage() && !isLoading()) {
+          <div class="view-empty" aria-hidden="true">
+            <p class="view-empty-title">Cargá una imagen para empezar</p>
+            <p class="view-empty-body">
+              Después arrastrala sobre el objeto para ubicarla y ajustá el tamaño desde el panel.
+            </p>
+          </div>
+        }
+
+        @if (isLoading()) {
+          <div class="view-loading" role="status">
+            <span class="scan" aria-hidden="true"><i></i></span>
+            <p>Cargando malla</p>
+          </div>
+        }
+
+        @if (wrapOverflowsViewport()) {
+          <p class="warn" #warnChip>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true">
+              <path d="M12 8.5v4.5M12 16.2v.2" />
+              <path d="M10.6 4.2 2.9 17.6a1.6 1.6 0 0 0 1.4 2.4h15.4a1.6 1.6 0 0 0 1.4-2.4L13.4 4.2a1.6 1.6 0 0 0-2.8 0Z" />
+            </svg>
+            <span>La imagen se sale del área visible</span>
+          </p>
+        }
+
+        <p class="view-hint" aria-hidden="true">Arrastrá para rotar · arrastrá la imagen para posicionarla</p>
 
         @if (isBaking()) {
-          <div class="bake-progress-bar" aria-hidden="true">
-            <div class="bake-progress-fill" [style.width.%]="bakeProgress()"></div>
+          <div class="bake" aria-hidden="true">
+            <div class="bake-head">
+              <span>Horneando proyección</span>
+              <b>{{ bakeProgress() | number:'2.0-0' }}%</b>
+            </div>
+            <div class="bake-track">
+              <div class="bake-fill" [style.transform]="'scaleX(' + bakeProgress() / 100 + ')'"></div>
+            </div>
           </div>
         }
       </div>
     </section>
 
-    <aside class="control-panel" aria-label="Controles de diseno">
-      <section class="panel-section setup-section" aria-label="Configuracion">
-        <label class="field">
-          <span class="field-label">Modelo</span>
-          <select [(ngModel)]="selectedModelUrl" (change)="loadSelectedModel()" [disabled]="isBaking()">
-            @for (model of modelOptions; track model.url) {
-              <option [value]="model.url">{{ model.label }}</option>
-            }
-          </select>
-        </label>
+    <aside class="rail" aria-label="Controles de diseño">
+      <section class="mod js-boot" aria-labelledby="mod-escena">
+        <h2 class="mod-head" id="mod-escena">Escena</h2>
 
         <label class="field">
-          <span class="field-label">Modo</span>
-          <div class="mode-toggle">
+          <span class="field-label">Modelo</span>
+          <span class="select-shell">
+            <select [(ngModel)]="selectedModelUrl" (change)="loadSelectedModel()" [disabled]="isBaking()">
+              @for (model of modelOptions; track model.url) {
+                <option [value]="model.url">{{ model.label }}</option>
+              }
+            </select>
+            <svg class="select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true">
+              <path d="m7 10 5 5 5-5" />
+            </svg>
+          </span>
+        </label>
+
+        <div class="field">
+          <span class="field-label">Proyección</span>
+          <div class="segmented" role="group" aria-label="Modo de proyección">
+            <span class="segmented-thumb" #segThumb aria-hidden="true"></span>
             <button
               type="button"
-              class="mode-btn"
+              class="segment"
               [class.active]="wrapMode === 'front'"
-              (click)="wrapMode = 'front'; updateWrap()"
+              [attr.aria-pressed]="wrapMode === 'front'"
+              (click)="setWrapMode('front')"
               [disabled]="isBaking() || stickerBaked()"
             >Frontal</button>
             <button
               type="button"
-              class="mode-btn"
+              class="segment"
               [class.active]="wrapMode === 'around'"
-              (click)="wrapMode = 'around'; updateWrap()"
+              [attr.aria-pressed]="wrapMode === 'around'"
+              (click)="setWrapMode('around')"
               [disabled]="isBaking() || stickerBaked()"
             >Rodear</button>
           </div>
-        </label>
+          <p class="field-help">
+            {{ wrapMode === 'front' ? 'Proyecta desde el frente, para calcos y stickers.' : 'Proyecta en radial, la imagen continúa alrededor del objeto.' }}
+          </p>
+        </div>
       </section>
 
-      <section class="panel-section sliders-section" aria-label="Ajustes de imagen">
-        <label class="field color-field">
-          <span class="field-label">Color del objeto</span>
-          <div class="color-control">
+      <section class="mod js-boot" aria-labelledby="mod-aspecto">
+        <h2 class="mod-head" id="mod-aspecto">Aspecto</h2>
+
+        <label class="field">
+          <span class="field-head">
+            <span class="field-label">Color del objeto</span>
+            <span class="field-value">{{ objectColor }}</span>
+          </span>
+          <span class="color-shell">
             <input
               type="color"
               [(ngModel)]="objectColor"
@@ -77,53 +162,125 @@
               [disabled]="isBaking()"
               aria-label="Color del objeto 3D"
             />
-            <span class="color-value">{{ objectColor }}</span>
-          </div>
+            <span class="color-note">Material base de la malla</span>
+          </span>
         </label>
 
-        <label class="field slider-field">
-          <div class="slider-header">
-            <span class="field-label">Tamano</span>
-            <span class="slider-value">{{ (wrapScale * 100) | number:'1.0-0' }}%</span>
-          </div>
-          <input
-            type="range"
-            min="0.08"
-            max="1"
-            step="0.01"
-            [(ngModel)]="wrapScale"
-            (input)="updateWrap()"
-            [disabled]="isBaking() || stickerBaked()"
-          />
+        <label class="field">
+          <span class="field-head">
+            <span class="field-label">Tamaño de la imagen</span>
+            <span class="field-value">{{ (wrapScale * 100) | number:'3.0-0' }}<i>%</i></span>
+          </span>
+          <span class="slider-shell">
+            <input
+              class="slider"
+              type="range"
+              min="0.08"
+              max="1"
+              step="0.01"
+              [style.--fill]="((wrapScale - 0.08) / 0.92) * 100 + '%'"
+              [(ngModel)]="wrapScale"
+              (input)="updateWrap()"
+              [disabled]="isBaking() || stickerBaked()"
+            />
+            <span class="slider-ticks" aria-hidden="true"></span>
+          </span>
         </label>
       </section>
 
-      @if (stickerBaked()) {
-        <section class="panel-section actions-section" aria-label="Acciones">
-          <button type="button" class="action-btn render-btn" (click)="renderBakedScene()" [disabled]="isRendering()">
-            <span class="btn-icon" aria-hidden="true">&#9728;</span>
-            <span>{{ isRendering() ? 'Renderizando' : 'Renderizar' }}</span>
-          </button>
-          <button type="button" class="action-btn reset-btn" (click)="resetBakedSticker()">
-            <span class="btn-icon" aria-hidden="true">&#8635;</span>
-            <span>Reset</span>
-          </button>
-        </section>
-      }
+      <section class="mod mod-actions js-boot" aria-labelledby="mod-salida">
+        <h2 class="mod-head" id="mod-salida">Salida</h2>
+
+        @if (!stickerBaked()) {
+          <p class="field-help">Soltá la imagen sobre el objeto para hornearla y habilitar el render.</p>
+        }
+
+        <button
+          type="button"
+          class="btn btn-primary"
+          (click)="renderBakedScene()"
+          [disabled]="!stickerBaked() || isRendering()"
+        >
+          <span>{{ isRendering() ? 'Renderizando' : 'Renderizar producto' }}</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+            <path d="M8 16 16 8m0 0h-6m6 0v6" />
+          </svg>
+        </button>
+
+        <button type="button" class="btn btn-ghost" (click)="resetBakedSticker()" [disabled]="!stickerBaked()">
+          <span>Descartar y empezar de nuevo</span>
+        </button>
+      </section>
+
+      <p class="rail-foot js-boot">Proyección UV en tiempo real sobre malla arbitraria · three.js</p>
     </aside>
   </main>
 
-  @if (renderImageUrl(); as renderUrl) {
-    <section class="render-overlay" role="dialog" aria-modal="true" aria-label="Render del producto" (click)="closeRenderPreview()">
-      <div class="render-card" (click)="$event.stopPropagation()">
-        <header class="render-header">
-          <strong>Render</strong>
-          <button type="button" class="render-close" aria-label="Cerrar render" (click)="closeRenderPreview()">×</button>
-        </header>
-        <div class="render-stage">
-          <img [src]="renderUrl" alt="Objeto 3D renderizado con imagen horneada" />
-        </div>
+  <footer class="foot">
+    <span class="foot-rule js-rule" aria-hidden="true"></span>
+
+    <span class="foot-cell">
+      <i>Modo</i>
+      <b>{{ wrapMode === 'front' ? 'Frontal' : 'Rodear' }}</b>
+    </span>
+    <span class="foot-cell">
+      <i>Escala</i>
+      <b>{{ (wrapScale * 100) | number:'3.0-0' }}%</b>
+    </span>
+    <span class="foot-cell">
+      <i>Color</i>
+      <b>{{ objectColor }}</b>
+    </span>
+    <span class="foot-cell">
+      <i>Malla</i>
+      <b>{{ stickerBaked() ? 'Horneada' : hasWrapImage() ? 'Con imagen' : 'Limpia' }}</b>
+    </span>
+
+    <p class="foot-status" aria-live="polite">
+      <span
+        class="foot-lamp"
+        [class.is-busy]="isBaking() || isLoading()"
+        [class.is-warn]="wrapOverflowsViewport()"
+        aria-hidden="true"
+      ></span>
+      <span #statusReadout>{{ statusMessage() }}</span>
+    </p>
+  </footer>
+</div>
+
+@if (renderImageUrl(); as renderUrl) {
+  <section
+    class="render-overlay"
+    #renderShade
+    role="dialog"
+    aria-modal="true"
+    aria-label="Render del producto"
+    (click)="closeRenderPreview()"
+  >
+    <div class="render-card" #renderCard (click)="$event.stopPropagation()">
+      <header class="render-head">
+        <h2>Render del producto</h2>
+        <button type="button" class="icon-btn" aria-label="Cerrar render" (click)="closeRenderPreview()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" aria-hidden="true">
+            <path d="m7 7 10 10M17 7 7 17" />
+          </svg>
+        </button>
+      </header>
+
+      <div class="render-stage">
+        <img [src]="renderUrl" alt="Objeto 3D renderizado con la imagen ya horneada sobre la malla" />
       </div>
-    </section>
-  }
-</section>
+
+      <footer class="render-foot">
+        <p>PNG · fondo de estudio</p>
+        <a class="btn btn-primary" [href]="renderUrl" download="printit-render.png">
+          <span>Descargar</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square" stroke-linejoin="miter" aria-hidden="true">
+            <path d="M12 4v11m0 0 4-4m-4 4-4-4" />
+            <path d="M5 19h14" />
+          </svg>
+        </a>
+      </footer>
+    </div>
+  </section>
+}
